@@ -63,26 +63,81 @@ export default function OrdensPage() {
     return form.id ? ops.find((o) => o.id === form.id)?.number || '' : getOPNumber(ops.length);
   }
 
+  async function adjustStock(materialStockId, deltaKg) {
+    if (!materialStockId || !deltaKg) return;
+    const stockItem = stockItems.find((s) => s.id === materialStockId);
+    if (!stockItem) return;
+
+    const newBalance = Number(stockItem.saldo_atual || 0) + Number(deltaKg || 0);
+    await updateRow('stock_items', stockItem.id, {
+      ...stockItem,
+      saldo_atual: newBalance,
+    });
+  }
+
   async function saveItem(e) {
     e.preventDefault();
-    const payload = {
-      id: form.id || newId('op'),
-      number: number(),
-      order_id: form.order_id || null,
-      product_id: form.product_id,
-      project_id: form.project_id || null,
-      client_id: form.client_id || null,
-      machine_id: form.machine_id || null,
-      quantity: Number(form.quantity || 0),
-      due_date: form.due_date || null,
-      status: form.status,
-      material_stock_id: form.material_stock_id || null,
-      consumo_kg: Number(form.consumo_kg || 0),
-    };
 
     try {
+      const existingOp = form.id ? ops.find((o) => o.id === form.id) : null;
+      const nextStatus = form.status;
+      const nextConsumo = Number(form.consumo_kg || 0);
+      const nextStockId = form.material_stock_id || null;
+
+      let materialDebited = existingOp?.material_debited || false;
+
+      // CENÁRIO 1: ainda não debitou e está virando Concluída => debita estoque
+      if (!materialDebited && nextStatus === 'Concluída' && nextStockId && nextConsumo > 0) {
+        await adjustStock(nextStockId, -nextConsumo);
+        materialDebited = true;
+      }
+
+      // CENÁRIO 2: já tinha debitado e saiu de Concluída => devolve estoque
+      if (materialDebited && existingOp?.status === 'Concluída' && nextStatus !== 'Concluída' && existingOp?.material_stock_id && Number(existingOp?.consumo_kg || 0) > 0) {
+        await adjustStock(existingOp.material_stock_id, Number(existingOp.consumo_kg || 0));
+        materialDebited = false;
+      }
+
+      // CENÁRIO 3: já estava concluída e o usuário trocou material ou consumo => recalcula diferença
+      if (
+        materialDebited &&
+        existingOp?.status === 'Concluída' &&
+        nextStatus === 'Concluída' &&
+        (
+          existingOp?.material_stock_id !== nextStockId ||
+          Number(existingOp?.consumo_kg || 0) !== nextConsumo
+        )
+      ) {
+        // devolve o antigo
+        if (existingOp?.material_stock_id && Number(existingOp?.consumo_kg || 0) > 0) {
+          await adjustStock(existingOp.material_stock_id, Number(existingOp.consumo_kg || 0));
+        }
+        // debita o novo
+        if (nextStockId && nextConsumo > 0) {
+          await adjustStock(nextStockId, -nextConsumo);
+        }
+        materialDebited = true;
+      }
+
+      const payload = {
+        id: form.id || newId('op'),
+        number: number(),
+        order_id: form.order_id || null,
+        product_id: form.product_id,
+        project_id: form.project_id || null,
+        client_id: form.client_id || null,
+        machine_id: form.machine_id || null,
+        quantity: Number(form.quantity || 0),
+        due_date: form.due_date || null,
+        status: nextStatus,
+        material_stock_id: nextStockId,
+        consumo_kg: nextConsumo,
+        material_debited: materialDebited,
+      };
+
       if (form.id) await updateRow('production_orders', form.id, payload);
       else await insertRow('production_orders', payload);
+
       await load();
       setForm(emptyForm);
     } catch (e) {
@@ -91,26 +146,26 @@ export default function OrdensPage() {
   }
 
   async function cascadeDelete(op) {
-    // CORREÇÃO 1: exclui movimentações de estoque ligadas ao número da O.P.
+    // se a O.P. já tinha debitado material e for excluída, devolve pro estoque
+    if (op.material_debited && op.material_stock_id && Number(op.consumo_kg || 0) > 0) {
+      await adjustStock(op.material_stock_id, Number(op.consumo_kg || 0));
+    }
+
     const allMovements = await listRows('movement_items');
     const relatedMovements = allMovements.filter((mov) => mov.document === op.number);
     for (const mov of relatedMovements) {
       await deleteRow('movement_items', mov.id);
     }
 
-    // Se a O.P. veio de um pedido, remove também o pedido e o lançamento financeiro automático.
     if (op.order_id) {
       const allFinancial = await listRows('financial_entries');
-      const relatedFinancial = allFinancial.filter(
-        (fin) => fin.order_id === op.order_id
-      );
+      const relatedFinancial = allFinancial.filter((fin) => fin.order_id === op.order_id);
       for (const fin of relatedFinancial) {
         await deleteRow('financial_entries', fin.id);
       }
       await deleteRow('orders', op.order_id);
     }
 
-    // Por fim, remove a própria O.P.
     await deleteRow('production_orders', op.id);
   }
 
@@ -140,7 +195,7 @@ export default function OrdensPage() {
       <Hero
         kicker="Operacional"
         title="Ordens de Produção"
-        description="Cada ordem recebe número automático e pode ser usada como documento na saída do estoque. Ao excluir uma O.P., os registros relacionados também são excluídos."
+        description="Cada ordem recebe número automático e pode ser usada como documento na saída do estoque. Ao concluir, o material é debitado do estoque automaticamente."
       />
 
       {error ? (
@@ -161,76 +216,52 @@ export default function OrdensPage() {
         <div className="panel">
           <form onSubmit={saveItem}>
             <div className="row">
-              <div className="field col-2">
-                <label>Nº O.P.</label>
-                <input disabled value={number()} />
-              </div>
+              <div className="field col-2"><label>Nº O.P.</label><input disabled value={number()} /></div>
               <div className="field col-3">
                 <label>Pedido origem</label>
                 <select value={form.order_id} onChange={(e) => setForm({ ...form, order_id: e.target.value })}>
                   <option value="">Selecione...</option>
-                  {orders.map((o) => (
-                    <option key={o.id} value={o.id}>{o.number}</option>
-                  ))}
+                  {orders.map((o) => <option key={o.id} value={o.id}>{o.number}</option>)}
                 </select>
               </div>
               <div className="field col-3">
                 <label>Produto</label>
                 <select value={form.product_id} onChange={(e) => setForm({ ...form, product_id: e.target.value })} required>
                   <option value="">Selecione...</option>
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
+                  {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
               <div className="field col-3">
                 <label>Cliente</label>
                 <select value={form.client_id} onChange={(e) => setForm({ ...form, client_id: e.target.value })}>
                   <option value="">Selecione...</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
+                  {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div className="field col-3">
                 <label>Projeto</label>
                 <select value={form.project_id} onChange={(e) => setForm({ ...form, project_id: e.target.value })}>
                   <option value="">Selecione...</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>{p.code} - {p.name}</option>
-                  ))}
+                  {projects.map((p) => <option key={p.id} value={p.id}>{p.code} - {p.name}</option>)}
                 </select>
               </div>
               <div className="field col-3">
                 <label>Máquina</label>
                 <select value={form.machine_id} onChange={(e) => setForm({ ...form, machine_id: e.target.value })}>
                   <option value="">Selecione...</option>
-                  {machines.map((m, index) => (
-                    <option key={m.id} value={m.id}>{getMachineName(index)}</option>
-                  ))}
+                  {machines.map((m, index) => <option key={m.id} value={m.id}>{getMachineName(index)}</option>)}
                 </select>
               </div>
               <div className="field col-3">
                 <label>Item de estoque</label>
                 <select value={form.material_stock_id} onChange={(e) => setForm({ ...form, material_stock_id: e.target.value })}>
                   <option value="">Selecione...</option>
-                  {stockItems.map((i) => (
-                    <option key={i.id} value={i.id}>{i.item_name}</option>
-                  ))}
+                  {stockItems.map((i) => <option key={i.id} value={i.id}>{i.item_name}</option>)}
                 </select>
               </div>
-              <div className="field col-2">
-                <label>Qtd</label>
-                <input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} required />
-              </div>
-              <div className="field col-2">
-                <label>Consumo (Kg)</label>
-                <input type="number" step="0.01" value={form.consumo_kg} onChange={(e) => setForm({ ...form, consumo_kg: e.target.value })} required />
-              </div>
-              <div className="field col-2">
-                <label>Prazo</label>
-                <input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
-              </div>
+              <div className="field col-2"><label>Qtd</label><input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} required /></div>
+              <div className="field col-2"><label>Consumo (Kg)</label><input type="number" step="0.01" value={form.consumo_kg} onChange={(e) => setForm({ ...form, consumo_kg: e.target.value })} required /></div>
+              <div className="field col-2"><label>Prazo</label><input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div>
               <div className="field col-3">
                 <label>Status</label>
                 <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
