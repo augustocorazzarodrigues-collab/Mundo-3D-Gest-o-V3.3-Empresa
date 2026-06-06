@@ -75,53 +75,76 @@ export default function OrdensPage() {
     });
   }
 
+  async function getAutoMovement(opNumber) {
+    const allMovements = await listRows('movement_items');
+    return allMovements.find((mov) => mov.document === opNumber && mov.type === 'Saída');
+  }
+
   async function saveItem(e) {
     e.preventDefault();
 
     try {
+      const opNumber = number();
       const existingOp = form.id ? ops.find((o) => o.id === form.id) : null;
       const nextStatus = form.status;
       const nextConsumo = Number(form.consumo_kg || 0);
       const nextStockId = form.material_stock_id || null;
+      const autoMovement = await getAutoMovement(opNumber);
 
-      let materialDebited = existingOp?.material_debited || false;
-
-      // CENÁRIO 1: ainda não debitou e está virando Concluída => debita estoque
-      if (!materialDebited && nextStatus === 'Concluída' && nextStockId && nextConsumo > 0) {
-        await adjustStock(nextStockId, -nextConsumo);
-        materialDebited = true;
-      }
-
-      // CENÁRIO 2: já tinha debitado e saiu de Concluída => devolve estoque
-      if (materialDebited && existingOp?.status === 'Concluída' && nextStatus !== 'Concluída' && existingOp?.material_stock_id && Number(existingOp?.consumo_kg || 0) > 0) {
-        await adjustStock(existingOp.material_stock_id, Number(existingOp.consumo_kg || 0));
-        materialDebited = false;
-      }
-
-      // CENÁRIO 3: já estava concluída e o usuário trocou material ou consumo => recalcula diferença
-      if (
-        materialDebited &&
-        existingOp?.status === 'Concluída' &&
-        nextStatus === 'Concluída' &&
-        (
-          existingOp?.material_stock_id !== nextStockId ||
-          Number(existingOp?.consumo_kg || 0) !== nextConsumo
-        )
-      ) {
-        // devolve o antigo
-        if (existingOp?.material_stock_id && Number(existingOp?.consumo_kg || 0) > 0) {
-          await adjustStock(existingOp.material_stock_id, Number(existingOp.consumo_kg || 0));
-        }
-        // debita o novo
-        if (nextStockId && nextConsumo > 0) {
+      // 1) Se vai ficar concluída, garante baixa de estoque via movimentação automática.
+      if (nextStatus === 'Concluída' && nextStockId && nextConsumo > 0) {
+        if (!autoMovement) {
+          // Cria movimento automático e baixa estoque
+          const stockItem = stockItems.find((s) => s.id === nextStockId);
+          await insertRow('movement_items', {
+            id: newId('mov'),
+            date: new Date().toISOString().slice(0, 10),
+            type: 'Saída',
+            stock_item_id: nextStockId,
+            document: opNumber,
+            qty_kg: nextConsumo,
+            cost_unit: Number(stockItem?.custo_unit || 0),
+            value: nextConsumo * Number(stockItem?.custo_unit || 0),
+          });
           await adjustStock(nextStockId, -nextConsumo);
+        } else {
+          // Se já existia movimento automático, recalcula diferença se usuário mudou material/consumo
+          const oldStockId = autoMovement.stock_item_id;
+          const oldQty = Number(autoMovement.qty_kg || 0);
+
+          if (oldStockId !== nextStockId || oldQty !== nextConsumo) {
+            // devolve antigo
+            if (oldStockId && oldQty > 0) {
+              await adjustStock(oldStockId, oldQty);
+            }
+            // debita novo
+            const stockItem = stockItems.find((s) => s.id === nextStockId);
+            await adjustStock(nextStockId, -nextConsumo);
+            await updateRow('movement_items', autoMovement.id, {
+              ...autoMovement,
+              stock_item_id: nextStockId,
+              qty_kg: nextConsumo,
+              cost_unit: Number(stockItem?.custo_unit || 0),
+              value: nextConsumo * Number(stockItem?.custo_unit || 0),
+              date: new Date().toISOString().slice(0, 10),
+            });
+          }
         }
-        materialDebited = true;
+      }
+
+      // 2) Se saiu de concluída para outro status, remove movimento automático e devolve estoque
+      if (existingOp?.status === 'Concluída' && nextStatus !== 'Concluída' && autoMovement) {
+        const oldStockId = autoMovement.stock_item_id;
+        const oldQty = Number(autoMovement.qty_kg || 0);
+        if (oldStockId && oldQty > 0) {
+          await adjustStock(oldStockId, oldQty);
+        }
+        await deleteRow('movement_items', autoMovement.id);
       }
 
       const payload = {
         id: form.id || newId('op'),
-        number: number(),
+        number: opNumber,
         order_id: form.order_id || null,
         product_id: form.product_id,
         project_id: form.project_id || null,
@@ -132,7 +155,6 @@ export default function OrdensPage() {
         status: nextStatus,
         material_stock_id: nextStockId,
         consumo_kg: nextConsumo,
-        material_debited: materialDebited,
       };
 
       if (form.id) await updateRow('production_orders', form.id, payload);
@@ -146,11 +168,18 @@ export default function OrdensPage() {
   }
 
   async function cascadeDelete(op) {
-    // se a O.P. já tinha debitado material e for excluída, devolve pro estoque
-    if (op.material_debited && op.material_stock_id && Number(op.consumo_kg || 0) > 0) {
-      await adjustStock(op.material_stock_id, Number(op.consumo_kg || 0));
+    // se existir movimento automático de saída com o número da O.P., devolve estoque e remove o movimento
+    const autoMovement = await getAutoMovement(op.number);
+    if (autoMovement) {
+      const stockId = autoMovement.stock_item_id;
+      const qty = Number(autoMovement.qty_kg || 0);
+      if (stockId && qty > 0) {
+        await adjustStock(stockId, qty);
+      }
+      await deleteRow('movement_items', autoMovement.id);
     }
 
+    // remove outros movimentos ligados à O.P. (se existirem além do automático)
     const allMovements = await listRows('movement_items');
     const relatedMovements = allMovements.filter((mov) => mov.document === op.number);
     for (const mov of relatedMovements) {
