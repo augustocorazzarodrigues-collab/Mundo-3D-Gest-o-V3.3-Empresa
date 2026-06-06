@@ -1,9 +1,254 @@
 'use client';
+
 import { useEffect, useMemo, useState } from 'react';
 import AppShell from '@/components/AppShell';
 import Hero from '@/components/Hero';
 import { computeMaterialCost, getProductCostTotal } from '@/lib/business';
 import { byId, getMachineName, getMarginAlert, moneyBR, pctBR, sortCreated, newId } from '@/lib/format';
 import { listRows, insertRow, updateRow, deleteRow } from '@/lib/service';
-const emptyForm={ id:'', product_id:'', machine_id:'', extra_cost:'', overhead:'', target_margin:'', sale_price:'' };
-export default function PrecificacaoPage(){ const [products,setProducts]=useState([]); const [materials,setMaterials]=useState([]); const [machines,setMachines]=useState([]); const [machineModels,setMachineModels]=useState([]); const [quotes,setQuotes]=useState([]); const [form,setForm]=useState(emptyForm); const [search,setSearch]=useState(''); const [error,setError]=useState(''); async function load(){ try{ const [p,m,maq,mdl,q]=await Promise.all([listRows('products'), listRows('materials'), listRows('machines'), listRows('machine_models'), listRows('price_quotes')]); setProducts(p); setMaterials(m); setMachines(maq); setMachineModels(mdl); setQuotes(sortCreated(q)); } catch(e){ setError(e.message); } } useEffect(()=>{ load(); },[]); const product=byId(products, form.product_id); const machine=byId(machines, form.machine_id); const model=machine ? byId(machineModels, machine.model_id) : null; const materialCost=computeMaterialCost(product || {}, materials); const machineCost=Number(product?.time_h || 0) * Number(model?.custo_hora || 0); const totalCost=materialCost + machineCost + Number(form.extra_cost || 0) + Number(form.overhead || 0); const suggested=totalCost > 0 ? totalCost / (1 - Number(form.target_margin || 0)/100) : 0; const realMargin=Number(form.sale_price || 0) > 0 ? ((Number(form.sale_price || 0)-totalCost)/Number(form.sale_price || 0))*100 : 0; const alert=getMarginAlert(realMargin); async function saveItem(e){ e.preventDefault(); const payload={ id:form.id || newId('pq'), product_id:form.product_id, machine_id:form.machine_id, extra_cost:Number(form.extra_cost||0), overhead:Number(form.overhead||0), target_margin:Number(form.target_margin||0), sale_price:Number(form.sale_price||0) }; try{ if(form.id) await updateRow('price_quotes', form.id, payload); else await insertRow('price_quotes', payload); await load(); setForm(emptyForm); } catch(e){ setError(e.message); } } async function deleteItem(id){ try{ await deleteRow('price_quotes', id); await load(); if(form.id===id) setForm(emptyForm); } catch(e){ setError(e.message); } } const db={ products, materials, machines, machineModels, priceQuotes:quotes }; const filtered=useMemo(()=>quotes.filter((item)=>[byId(products,item.product_id)?.name || '', item.target_margin].join(' ').toLowerCase().includes(search.toLowerCase())),[quotes,products,search]); return <AppShell><Hero kicker="Custos e preços" title="Precificação" description="Selecione o produto e a máquina para calcular material, custo hora e margem." />{error ? <section className="section alert-box">{error}</section> : null}<section className="section split-grid"><div className="surface"><div className="panel-header"><div><div className="panel-title">Gerenciamento</div><div className="panel-subtitle">Cálculo de custo total, preço sugerido e margem real.</div></div><button className="btn" onClick={()=>setForm(emptyForm)}>Novo registro</button></div><div className="panel"><form onSubmit={saveItem}><div className="row"><div className="field col-4"><label>Produto</label><select value={form.product_id} onChange={(e)=>setForm({ ...form, product_id:e.target.value })} required><option value="">Selecione...</option>{products.map((p)=><option key={p.id} value={p.id}>{p.name}</option>)}</select></div><div className="field col-4"><label>Máquina</label><select value={form.machine_id} onChange={(e)=>setForm({ ...form, machine_id:e.target.value })} required><option value="">Selecione...</option>{machines.map((m,index)=><option key={m.id} value={m.id}>{getMachineName(index)}</option>)}</select></div><div className="field col-4"><label>Margem alvo (%)</label><input type="number" step="0.01" value={form.target_margin} onChange={(e)=>setForm({ ...form, target_margin:e.target.value })} /></div><div className="field col-3"><label>Extras</label><input type="number" step="0.01" value={form.extra_cost} onChange={(e)=>setForm({ ...form, extra_cost:e.target.value })} /></div><div className="field col-3"><label>Indiretos</label><input type="number" step="0.01" value={form.overhead} onChange={(e)=>setForm({ ...form, overhead:e.target.value })} /></div><div className="field col-3"><label>Preço venda</label><input type="number" step="0.01" value={form.sale_price} onChange={(e)=>setForm({ ...form, sale_price:e.target.value })} /></div><div className="field col-3"><label>Custo material</label><input disabled value={moneyBR(materialCost)} /></div><div className="field col-3"><label>Custo máquina</label><input disabled value={moneyBR(machineCost)} /></div><div className="field col-3"><label>Custo total</label><input disabled value={moneyBR(totalCost)} /></div><div className="field col-3"><label>Preço sugerido</label><input disabled value={moneyBR(suggested)} /></div><div className="field col-3"><label>Margem real</label><input disabled value={pctBR(realMargin)} /></div><div className="field col-3"><label>Alerta</label><input disabled value={alert.label} /></div></div><div className="actions-row"><button className="btn">Salvar</button><button className="btn-secondary" type="button" onClick={()=>setForm(emptyForm)}>Cancelar</button></div></form></div></div><div className="surface panel"><h3 className="section-title">Leitura rápida</h3><div className="kpi-list"><div className="kpi-item"><span>Produto selecionado</span><strong>{product?.name || '-'}</strong></div><div className="kpi-item"><span>Material</span><strong>{product ? byId(materials,product.material)?.name : '-'}</strong></div><div className="kpi-item"><span>Tempo</span><strong>{product?.time_h || 0} h</strong></div><div className="kpi-item"><span>Custo/hora</span><strong>{moneyBR(model?.custo_hora || 0)}</strong></div><div className="kpi-item"><span>Preço base</span><strong>{moneyBR(product?.price_base || 0)}</strong></div><div className="kpi-item"><span>Saúde da margem</span><strong className={`badge ${alert.tone}`}>{alert.label}</strong></div></div></div></section><section className="section surface"><div className="table-tools"><input placeholder="Buscar na tabela..." value={search} onChange={(e)=>setSearch(e.target.value)} /><div className="subtle">{filtered.length} registro(s)</div></div><div className="table-wrap"><table><thead><tr><th>Produto</th><th>Máquina</th><th>Custo total</th><th>Margem alvo</th><th>Preço venda</th><th>Margem real</th><th>Alerta</th><th>Ações</th></tr></thead><tbody>{filtered.map((item)=>{ const mIndex=machines.findIndex((m)=>m.id===item.machine_id); const cost=getProductCostTotal(db,item.product_id,item.machine_id); const margin=item.sale_price>0 ? ((Number(item.sale_price||0)-cost)/Number(item.sale_price||0))*100 : 0; const al=getMarginAlert(margin); return <tr key={item.id}><td>{byId(products,item.product_id)?.name || '-'}</td><td>{mIndex>=0 ? getMachineName(mIndex) : '-'}</td><td>{moneyBR(cost)}</td><td>{pctBR(item.target_margin)}</td><td>{moneyBR(item.sale_price)}</td><td>{pctBR(margin)}</td><td><span className={`badge ${al.tone}`}>{al.label}</span></td><td><div className="inline-actions"><button className="btn-secondary" onClick={()=>setForm(item)}>Editar</button><button className="btn-danger" onClick={()=>deleteItem(item.id)}>Excluir</button></div></td></tr>; })}</tbody></table></div></section></AppShell>; }
+
+const emptyForm = { id: '', product_id: '', machine_id: '', extra_cost: '', overhead: '', target_margin: '', sale_price: '' };
+
+export default function PrecificacaoPage() {
+  const [products, setProducts] = useState([]);
+  const [materials, setMaterials] = useState([]);
+  const [machines, setMachines] = useState([]);
+  const [machineModels, setMachineModels] = useState([]);
+  const [quotes, setQuotes] = useState([]);
+  const [form, setForm] = useState(emptyForm);
+  const [search, setSearch] = useState('');
+  const [error, setError] = useState('');
+
+  async function load() {
+    try {
+      const [p, m, maq, mdl, q] = await Promise.all([
+        listRows('products'),
+        listRows('materials'),
+        listRows('machines'),
+        listRows('machine_models'),
+        listRows('price_quotes'),
+      ]);
+      setProducts(p);
+      setMaterials(m);
+      setMachines(maq);
+      setMachineModels(mdl);
+      setQuotes(sortCreated(q));
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const product = byId(products, form.product_id);
+  const machine = byId(machines, form.machine_id);
+  const model = machine ? byId(machineModels, machine.model_id) : null;
+
+  // CORREÇÃO: usar primeiro o custo já calculado/salvo na aba Produtos.
+  const materialCostFromProduct = Number(product?.material_cost || 0);
+  const fallbackMaterialCost = computeMaterialCost(product || {}, materials);
+  const materialCost = materialCostFromProduct > 0 ? materialCostFromProduct : fallbackMaterialCost;
+
+  const machineCost = Number(product?.time_h || 0) * Number(model?.custo_hora || 0);
+  const totalCost = materialCost + machineCost + Number(form.extra_cost || 0) + Number(form.overhead || 0);
+  const suggested = totalCost > 0 ? totalCost / (1 - Number(form.target_margin || 0) / 100) : 0;
+  const realMargin = Number(form.sale_price || 0) > 0 ? ((Number(form.sale_price || 0) - totalCost) / Number(form.sale_price || 0)) * 100 : 0;
+  const alert = getMarginAlert(realMargin);
+
+  async function saveItem(e) {
+    e.preventDefault();
+    const payload = {
+      id: form.id || newId('pq'),
+      product_id: form.product_id,
+      machine_id: form.machine_id,
+      extra_cost: Number(form.extra_cost || 0),
+      overhead: Number(form.overhead || 0),
+      target_margin: Number(form.target_margin || 0),
+      sale_price: Number(form.sale_price || 0),
+    };
+
+    try {
+      if (form.id) await updateRow('price_quotes', form.id, payload);
+      else await insertRow('price_quotes', payload);
+      await load();
+      setForm(emptyForm);
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  async function handleDelete(id) {
+    try {
+      await deleteRow('price_quotes', id);
+      await load();
+      if (form.id === id) setForm(emptyForm);
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  const db = { products, materials, machines, machineModels, priceQuotes: quotes };
+
+  const filtered = useMemo(() => {
+    return quotes.filter((item) =>
+      [byId(products, item.product_id)?.name || '', item.target_margin]
+        .join(' ')
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    );
+  }, [quotes, products, search]);
+
+  return (
+    <AppShell>
+      <Hero
+        kicker="Custos e preços"
+        title="Precificação"
+        description="Selecione o produto e a máquina para calcular material, custo hora e margem. O custo do material agora puxa primeiro o valor salvo em Produtos."
+      />
+
+      {error ? (
+        <section className="section">
+          <div className="alert-box">{error}</div>
+        </section>
+      ) : null}
+
+      <section className="section split-grid">
+        <div className="surface">
+          <div className="panel-header">
+            <div>
+              <div className="panel-title">Gerenciamento</div>
+              <div className="panel-subtitle">Cálculo de custo total, preço sugerido e margem real.</div>
+            </div>
+            <button className="btn" onClick={() => setForm(emptyForm)}>Novo registro</button>
+          </div>
+          <div className="panel">
+            <form onSubmit={saveItem}>
+              <div className="row">
+                <div className="field col-4">
+                  <label>Produto</label>
+                  <select value={form.product_id} onChange={(e) => setForm({ ...form, product_id: e.target.value })} required>
+                    <option value="">Selecione...</option>
+                    {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+                <div className="field col-4">
+                  <label>Máquina</label>
+                  <select value={form.machine_id} onChange={(e) => setForm({ ...form, machine_id: e.target.value })} required>
+                    <option value="">Selecione...</option>
+                    {machines.map((m, index) => <option key={m.id} value={m.id}>{getMachineName(index)}</option>)}
+                  </select>
+                </div>
+                <div className="field col-4">
+                  <label>Margem alvo (%)</label>
+                  <input type="number" step="0.01" value={form.target_margin} onChange={(e) => setForm({ ...form, target_margin: e.target.value })} />
+                </div>
+                <div className="field col-3">
+                  <label>Extras</label>
+                  <input type="number" step="0.01" value={form.extra_cost} onChange={(e) => setForm({ ...form, extra_cost: e.target.value })} />
+                </div>
+                <div className="field col-3">
+                  <label>Indiretos</label>
+                  <input type="number" step="0.01" value={form.overhead} onChange={(e) => setForm({ ...form, overhead: e.target.value })} />
+                </div>
+                <div className="field col-3">
+                  <label>Preço venda</label>
+                  <input type="number" step="0.01" value={form.sale_price} onChange={(e) => setForm({ ...form, sale_price: e.target.value })} />
+                </div>
+                <div className="field col-3">
+                  <label>Custo material</label>
+                  <input disabled value={moneyBR(materialCost)} />
+                </div>
+                <div className="field col-3">
+                  <label>Custo máquina</label>
+                  <input disabled value={moneyBR(machineCost)} />
+                </div>
+                <div className="field col-3">
+                  <label>Custo total</label>
+                  <input disabled value={moneyBR(totalCost)} />
+                </div>
+                <div className="field col-3">
+                  <label>Preço sugerido</label>
+                  <input disabled value={moneyBR(suggested)} />
+                </div>
+                <div className="field col-3">
+                  <label>Margem real</label>
+                  <input disabled value={pctBR(realMargin)} />
+                </div>
+                <div className="field col-3">
+                  <label>Alerta</label>
+                  <input disabled value={alert.label} />
+                </div>
+              </div>
+              <div className="actions-row">
+                <button className="btn">Salvar</button>
+                <button className="btn-secondary" type="button" onClick={() => setForm(emptyForm)}>Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div className="surface panel">
+          <h3 className="section-title">Leitura rápida</h3>
+          <div className="kpi-list">
+            <div className="kpi-item"><span>Produto selecionado</span><strong>{product?.name || '-'}</strong></div>
+            <div className="kpi-item"><span>Material</span><strong>{product ? byId(materials, product.material)?.name : '-'}</strong></div>
+            <div className="kpi-item"><span>Tempo</span><strong>{product?.time_h || 0} h</strong></div>
+            <div className="kpi-item"><span>Custo/hora</span><strong>{moneyBR(model?.custo_hora || 0)}</strong></div>
+            <div className="kpi-item"><span>Custo material vindo de Produtos</span><strong>{moneyBR(materialCost)}</strong></div>
+            <div className="kpi-item"><span>Saúde da margem</span><strong className={`badge ${alert.tone}`}>{alert.label}</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="section surface">
+        <div className="table-tools">
+          <input placeholder="Buscar na tabela..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <div className="subtle">{filtered.length} registro(s)</div>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th>Máquina</th>
+                <th>Custo total</th>
+                <th>Margem alvo</th>
+                <th>Preço venda</th>
+                <th>Margem real</th>
+                <th>Alerta</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((item) => {
+                const mIndex = machines.findIndex((m) => m.id === item.machine_id);
+                const cost = getProductCostTotal(db, item.product_id, item.machine_id);
+                const margin = item.sale_price > 0 ? ((Number(item.sale_price || 0) - cost) / Number(item.sale_price || 0)) * 100 : 0;
+                const al = getMarginAlert(margin);
+                return (
+                  <tr key={item.id}>
+                    <td>{byId(products, item.product_id)?.name || '-'}</td>
+                    <td>{mIndex >= 0 ? getMachineName(mIndex) : '-'}</td>
+                    <td>{moneyBR(cost)}</td>
+                    <td>{pctBR(item.target_margin)}</td>
+                    <td>{moneyBR(item.sale_price)}</td>
+                    <td>{pctBR(margin)}</td>
+                    <td><span className={`badge ${al.tone}`}>{al.label}</span></td>
+                    <td>
+                      <div className="inline-actions">
+                        <button className="btn-secondary" onClick={() => setForm({ ...item })}>Editar</button>
+                        <button className="btn-danger" onClick={() => handleDelete(item.id)}>Excluir</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </AppShell>
+  );
+}
