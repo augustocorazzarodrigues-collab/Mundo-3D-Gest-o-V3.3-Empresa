@@ -16,8 +16,15 @@ const emptyForm = {
   quantity: '',
   due_date: '',
   status: 'Planejada',
-  material_stock_id: '',
-  consumo_kg: '',
+  material_mode: 'Monocromático',
+  material_stock_id_1: '',
+  consumo_kg_1: '',
+  material_stock_id_2: '',
+  consumo_kg_2: '',
+  material_stock_id_3: '',
+  consumo_kg_3: '',
+  material_stock_id_4: '',
+  consumo_kg_4: '',
 };
 
 export default function OrdensPage() {
@@ -63,6 +70,47 @@ export default function OrdensPage() {
     return form.id ? ops.find((o) => o.id === form.id)?.number || '' : getOPNumber(ops.length);
   }
 
+  function buildMaterialsFromForm(currentForm) {
+    const slots = [1, 2, 3, 4].map((n) => ({
+      stock_id: currentForm[`material_stock_id_${n}`] || '',
+      qty: Number(currentForm[`consumo_kg_${n}`] || 0),
+      index: n,
+    }));
+
+    if ((currentForm.material_mode || 'Monocromático') === 'Monocromático') {
+      return slots.slice(0, 1).filter((x) => x.stock_id && x.qty > 0);
+    }
+
+    return slots.filter((x) => x.stock_id && x.qty > 0);
+  }
+
+  function buildMaterialsFromOp(op) {
+    if (!op) return [];
+
+    const hasNewStructure = op.material_stock_id_1 || op.material_stock_id_2 || op.material_stock_id_3 || op.material_stock_id_4;
+
+    if (hasNewStructure) {
+      return [1, 2, 3, 4]
+        .map((n) => ({
+          stock_id: op[`material_stock_id_${n}`] || '',
+          qty: Number(op[`consumo_kg_${n}`] || 0),
+          index: n,
+        }))
+        .filter((x) => x.stock_id && x.qty > 0);
+    }
+
+    // compatibilidade com registros antigos
+    if (op.material_stock_id && Number(op.consumo_kg || 0) > 0) {
+      return [{ stock_id: op.material_stock_id, qty: Number(op.consumo_kg || 0), index: 1 }];
+    }
+
+    return [];
+  }
+
+  function getTotalConsumption(materials) {
+    return materials.reduce((acc, item) => acc + Number(item.qty || 0), 0);
+  }
+
   async function adjustStock(materialStockId, deltaKg) {
     if (!materialStockId || !deltaKg) return;
     const stockItem = stockItems.find((s) => s.id === materialStockId);
@@ -75,9 +123,39 @@ export default function OrdensPage() {
     });
   }
 
-  async function getAutoMovement(opNumber) {
+  async function getAutoMovements(opNumber) {
     const allMovements = await listRows('movement_items');
-    return allMovements.find((mov) => mov.document === opNumber && mov.type === 'Saída');
+    return allMovements.filter(
+      (mov) => String(mov.document || '').startsWith(`${opNumber}::AUTO::`) && mov.type === 'Saída'
+    );
+  }
+
+  async function createAutoMovements(opNumber, materials) {
+    for (const item of materials) {
+      const stockItem = stockItems.find((s) => s.id === item.stock_id);
+      await insertRow('movement_items', {
+        id: newId('mov'),
+        date: new Date().toISOString().slice(0, 10),
+        type: 'Saída',
+        stock_item_id: item.stock_id,
+        document: `${opNumber}::AUTO::${item.index}`,
+        qty_kg: Number(item.qty || 0),
+        cost_unit: Number(stockItem?.custo_unit || 0),
+        value: Number(item.qty || 0) * Number(stockItem?.custo_unit || 0),
+      });
+      await adjustStock(item.stock_id, -Number(item.qty || 0));
+    }
+  }
+
+  async function revertAndDeleteAutoMovements(opNumber) {
+    const oldMovements = await getAutoMovements(opNumber);
+    for (const mov of oldMovements) {
+      const qty = Number(mov.qty_kg || 0);
+      if (mov.stock_item_id && qty > 0) {
+        await adjustStock(mov.stock_item_id, qty);
+      }
+      await deleteRow('movement_items', mov.id);
+    }
   }
 
   async function saveItem(e) {
@@ -87,59 +165,20 @@ export default function OrdensPage() {
       const opNumber = number();
       const existingOp = form.id ? ops.find((o) => o.id === form.id) : null;
       const nextStatus = form.status;
-      const nextConsumo = Number(form.consumo_kg || 0);
-      const nextStockId = form.material_stock_id || null;
-      const autoMovement = await getAutoMovement(opNumber);
+      const materials = buildMaterialsFromForm(form);
+      const totalConsumo = getTotalConsumption(materials);
 
-      // 1) Se vai ficar concluída, garante baixa de estoque via movimentação automática.
-      if (nextStatus === 'Concluída' && nextStockId && nextConsumo > 0) {
-        if (!autoMovement) {
-          // Cria movimento automático e baixa estoque
-          const stockItem = stockItems.find((s) => s.id === nextStockId);
-          await insertRow('movement_items', {
-            id: newId('mov'),
-            date: new Date().toISOString().slice(0, 10),
-            type: 'Saída',
-            stock_item_id: nextStockId,
-            document: opNumber,
-            qty_kg: nextConsumo,
-            cost_unit: Number(stockItem?.custo_unit || 0),
-            value: nextConsumo * Number(stockItem?.custo_unit || 0),
-          });
-          await adjustStock(nextStockId, -nextConsumo);
-        } else {
-          // Se já existia movimento automático, recalcula diferença se usuário mudou material/consumo
-          const oldStockId = autoMovement.stock_item_id;
-          const oldQty = Number(autoMovement.qty_kg || 0);
-
-          if (oldStockId !== nextStockId || oldQty !== nextConsumo) {
-            // devolve antigo
-            if (oldStockId && oldQty > 0) {
-              await adjustStock(oldStockId, oldQty);
-            }
-            // debita novo
-            const stockItem = stockItems.find((s) => s.id === nextStockId);
-            await adjustStock(nextStockId, -nextConsumo);
-            await updateRow('movement_items', autoMovement.id, {
-              ...autoMovement,
-              stock_item_id: nextStockId,
-              qty_kg: nextConsumo,
-              cost_unit: Number(stockItem?.custo_unit || 0),
-              value: nextConsumo * Number(stockItem?.custo_unit || 0),
-              date: new Date().toISOString().slice(0, 10),
-            });
-          }
+      // Se está concluída, recria as movimentações automáticas com base no estado atual.
+      if (nextStatus === 'Concluída') {
+        await revertAndDeleteAutoMovements(opNumber);
+        if (materials.length) {
+          await createAutoMovements(opNumber, materials);
         }
       }
 
-      // 2) Se saiu de concluída para outro status, remove movimento automático e devolve estoque
-      if (existingOp?.status === 'Concluída' && nextStatus !== 'Concluída' && autoMovement) {
-        const oldStockId = autoMovement.stock_item_id;
-        const oldQty = Number(autoMovement.qty_kg || 0);
-        if (oldStockId && oldQty > 0) {
-          await adjustStock(oldStockId, oldQty);
-        }
-        await deleteRow('movement_items', autoMovement.id);
+      // Se antes estava concluída e agora não está mais, devolve estoque e remove movimentos automáticos.
+      if (existingOp?.status === 'Concluída' && nextStatus !== 'Concluída') {
+        await revertAndDeleteAutoMovements(opNumber);
       }
 
       const payload = {
@@ -153,8 +192,20 @@ export default function OrdensPage() {
         quantity: Number(form.quantity || 0),
         due_date: form.due_date || null,
         status: nextStatus,
-        material_stock_id: nextStockId,
-        consumo_kg: nextConsumo,
+        material_mode: form.material_mode || 'Monocromático',
+
+        material_stock_id_1: form.material_stock_id_1 || null,
+        consumo_kg_1: Number(form.consumo_kg_1 || 0),
+        material_stock_id_2: form.material_stock_id_2 || null,
+        consumo_kg_2: Number(form.consumo_kg_2 || 0),
+        material_stock_id_3: form.material_stock_id_3 || null,
+        consumo_kg_3: Number(form.consumo_kg_3 || 0),
+        material_stock_id_4: form.material_stock_id_4 || null,
+        consumo_kg_4: Number(form.consumo_kg_4 || 0),
+
+        // compatibilidade com campos antigos
+        material_stock_id: materials[0]?.stock_id || null,
+        consumo_kg: totalConsumo,
       };
 
       if (form.id) await updateRow('production_orders', form.id, payload);
@@ -168,20 +219,10 @@ export default function OrdensPage() {
   }
 
   async function cascadeDelete(op) {
-    // se existir movimento automático de saída com o número da O.P., devolve estoque e remove o movimento
-    const autoMovement = await getAutoMovement(op.number);
-    if (autoMovement) {
-      const stockId = autoMovement.stock_item_id;
-      const qty = Number(autoMovement.qty_kg || 0);
-      if (stockId && qty > 0) {
-        await adjustStock(stockId, qty);
-      }
-      await deleteRow('movement_items', autoMovement.id);
-    }
+    await revertAndDeleteAutoMovements(op.number);
 
-    // remove outros movimentos ligados à O.P. (se existirem além do automático)
     const allMovements = await listRows('movement_items');
-    const relatedMovements = allMovements.filter((mov) => mov.document === op.number);
+    const relatedMovements = allMovements.filter((mov) => String(mov.document || '').startsWith(`${op.number}`));
     for (const mov of relatedMovements) {
       await deleteRow('movement_items', mov.id);
     }
@@ -219,12 +260,46 @@ export default function OrdensPage() {
     );
   }, [ops, products, customers, search]);
 
+  function materialSummary(op) {
+    const mats = buildMaterialsFromOp(op);
+    if (!mats.length) return '-';
+    return mats.map((m) => `${nameById(stockItems, m.stock_id, 'item_name')} (${m.qty} kg)`).join(' | ');
+  }
+
+  function fillFormForEdit(item) {
+    const materials = buildMaterialsFromOp(item);
+    const mode = item.material_mode || (materials.length > 1 ? 'Colorido' : 'Monocromático');
+
+    const next = {
+      ...emptyForm,
+      ...item,
+      quantity: item.quantity ?? '',
+      due_date: item.due_date || '',
+      material_mode: mode,
+    };
+
+    [1, 2, 3, 4].forEach((n) => {
+      next[`material_stock_id_${n}`] = '';
+      next[`consumo_kg_${n}`] = '';
+    });
+
+    materials.forEach((m, idx) => {
+      const slot = idx + 1;
+      if (slot <= 4) {
+        next[`material_stock_id_${slot}`] = m.stock_id;
+        next[`consumo_kg_${slot}`] = m.qty;
+      }
+    });
+
+    setForm(next);
+  }
+
   return (
     <AppShell>
       <Hero
         kicker="Operacional"
         title="Ordens de Produção"
-        description="Cada ordem recebe número automático e pode ser usada como documento na saída do estoque. Ao concluir, o material é debitado do estoque automaticamente."
+        description="Agora você pode definir se a O.P. é monocromática ou colorida, com até 4 itens de estoque opcionais. Ao concluir, o material é debitado automaticamente do estoque."
       />
 
       {error ? (
@@ -281,15 +356,7 @@ export default function OrdensPage() {
                   {machines.map((m, index) => <option key={m.id} value={m.id}>{getMachineName(index)}</option>)}
                 </select>
               </div>
-              <div className="field col-3">
-                <label>Item de estoque</label>
-                <select value={form.material_stock_id} onChange={(e) => setForm({ ...form, material_stock_id: e.target.value })}>
-                  <option value="">Selecione...</option>
-                  {stockItems.map((i) => <option key={i.id} value={i.id}>{i.item_name}</option>)}
-                </select>
-              </div>
               <div className="field col-2"><label>Qtd</label><input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} required /></div>
-              <div className="field col-2"><label>Consumo (Kg)</label><input type="number" step="0.01" value={form.consumo_kg} onChange={(e) => setForm({ ...form, consumo_kg: e.target.value })} required /></div>
               <div className="field col-2"><label>Prazo</label><input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} /></div>
               <div className="field col-3">
                 <label>Status</label>
@@ -301,6 +368,66 @@ export default function OrdensPage() {
                   <option>Cancelada</option>
                 </select>
               </div>
+              <div className="field col-3">
+                <label>Tipo de material</label>
+                <select value={form.material_mode} onChange={(e) => setForm({ ...form, material_mode: e.target.value })}>
+                  <option>Monocromático</option>
+                  <option>Colorido</option>
+                </select>
+              </div>
+
+              {/* SLOT 1 - sempre aparece */}
+              <div className="field col-4">
+                <label>Item de estoque 1</label>
+                <select value={form.material_stock_id_1} onChange={(e) => setForm({ ...form, material_stock_id_1: e.target.value })}>
+                  <option value="">Selecione...</option>
+                  {stockItems.map((i) => <option key={i.id} value={i.id}>{i.item_name}</option>)}
+                </select>
+              </div>
+              <div className="field col-2">
+                <label>Consumo 1 (Kg)</label>
+                <input type="number" step="0.01" value={form.consumo_kg_1} onChange={(e) => setForm({ ...form, consumo_kg_1: e.target.value })} />
+              </div>
+
+              {form.material_mode === 'Colorido' ? (
+                <>
+                  <div className="field col-4">
+                    <label>Item de estoque 2</label>
+                    <select value={form.material_stock_id_2} onChange={(e) => setForm({ ...form, material_stock_id_2: e.target.value })}>
+                      <option value="">Selecione...</option>
+                      {stockItems.map((i) => <option key={i.id} value={i.id}>{i.item_name}</option>)}
+                    </select>
+                  </div>
+                  <div className="field col-2">
+                    <label>Consumo 2 (Kg)</label>
+                    <input type="number" step="0.01" value={form.consumo_kg_2} onChange={(e) => setForm({ ...form, consumo_kg_2: e.target.value })} />
+                  </div>
+
+                  <div className="field col-4">
+                    <label>Item de estoque 3</label>
+                    <select value={form.material_stock_id_3} onChange={(e) => setForm({ ...form, material_stock_id_3: e.target.value })}>
+                      <option value="">Selecione...</option>
+                      {stockItems.map((i) => <option key={i.id} value={i.id}>{i.item_name}</option>)}
+                    </select>
+                  </div>
+                  <div className="field col-2">
+                    <label>Consumo 3 (Kg)</label>
+                    <input type="number" step="0.01" value={form.consumo_kg_3} onChange={(e) => setForm({ ...form, consumo_kg_3: e.target.value })} />
+                  </div>
+
+                  <div className="field col-4">
+                    <label>Item de estoque 4</label>
+                    <select value={form.material_stock_id_4} onChange={(e) => setForm({ ...form, material_stock_id_4: e.target.value })}>
+                      <option value="">Selecione...</option>
+                      {stockItems.map((i) => <option key={i.id} value={i.id}>{i.item_name}</option>)}
+                    </select>
+                  </div>
+                  <div className="field col-2">
+                    <label>Consumo 4 (Kg)</label>
+                    <input type="number" step="0.01" value={form.consumo_kg_4} onChange={(e) => setForm({ ...form, consumo_kg_4: e.target.value })} />
+                  </div>
+                </>
+              ) : null}
             </div>
             <div className="actions-row">
               <button className="btn">Salvar</button>
@@ -325,9 +452,8 @@ export default function OrdensPage() {
                 <th>Cliente</th>
                 <th>Projeto</th>
                 <th>Máquina</th>
-                <th>Item estoque</th>
+                <th>Materiais</th>
                 <th>Qtd</th>
-                <th>Consumo</th>
                 <th>Prazo</th>
                 <th>Status</th>
                 <th>Ações</th>
@@ -344,14 +470,13 @@ export default function OrdensPage() {
                     <td>{nameById(customers, item.client_id)}</td>
                     <td>{item.project_id ? `${nameById(projects, item.project_id, 'code')} - ${nameById(projects, item.project_id)}` : '-'}</td>
                     <td>{mIdx >= 0 ? getMachineName(mIdx) : '-'}</td>
-                    <td>{nameById(stockItems, item.material_stock_id, 'item_name')}</td>
+                    <td>{materialSummary(item)}</td>
                     <td>{item.quantity}</td>
-                    <td>{item.consumo_kg}</td>
                     <td>{item.due_date || '-'}</td>
                     <td><span className={`badge ${item.status === 'Concluída' ? 'success' : item.status === 'Cancelada' ? 'danger' : 'info'}`}>{item.status}</span></td>
                     <td>
                       <div className="inline-actions">
-                        <button className="btn-secondary" onClick={() => setForm({ ...item, quantity: item.quantity ?? '', consumo_kg: item.consumo_kg ?? '' })}>Editar</button>
+                        <button className="btn-secondary" onClick={() => fillFormForEdit(item)}>Editar</button>
                         <button className="btn-danger" onClick={() => handleDelete(item.id)}>Excluir</button>
                       </div>
                     </td>
