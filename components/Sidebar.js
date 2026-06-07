@@ -1,6 +1,10 @@
 'use client';
+
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import { signOutUser } from '@/lib/auth';
 
 const links = [
   { href:'/inicio', label:'Início', icon:'🏠' },
@@ -24,8 +28,28 @@ const links = [
   { href:'/comercial/financeiro', label:'Financeiro', icon:'🏦' },
 ];
 
-export default function Sidebar(){
+export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [email, setEmail] = useState('');
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setEmail(data?.session?.user?.email || '');
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setEmail(session?.user?.email || '');
+    });
+
+    return () => authListener?.subscription?.unsubscribe?.();
+  }, []);
+
+  async function handleLogout() {
+    await signOutUser();
+    router.replace('/login');
+  }
+
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -35,22 +59,33 @@ export default function Sidebar(){
           <div className="brand-subtitle">Gestão • V3.3 FULL Banco</div>
         </div>
       </div>
+
       <div className="sidebar-card">
         Dados centralizados no Supabase. O que você alterar aparece para o seu sócio e vice-versa, tudo online.
       </div>
+
+      <div className="sidebar-card">
+        <strong>Usuário logado:</strong><br />
+        {email || 'Não identificado'}
+        <div style={{ marginTop: 10 }}>
+          <button className="btn-secondary" onClick={handleLogout}>Sair</button>
+        </div>
+      </div>
+
       <div className="sidebar-title">Navegação</div>
       <nav className="nav-list">
         {links.map((item, index) => item.title ? (
-          <div key={`t-${index}`} className="sidebar-title" style={{marginTop:12}}>{item.title}</div>
+          <div key={`t-${index}`} className="sidebar-title" style={{ marginTop: 12 }}>{item.title}</div>
         ) : (
-          <Link key={item.href} href={item.href} className={`nav-item ${pathname===item.href?'active':''}`}>
+          <Link key={item.href} href={item.href} className={`nav-item ${pathname === item.href ? 'active' : ''}`}>
             <span className="nav-emoji">{item.icon}</span>
             <span>{item.label}</span>
           </Link>
         ))}
       </nav>
+
       <div className="sidebar-card">
-        Operação compartilhada sem dependência de localStorage. Nesta versão, toda a persistência foi preparada para banco.
+        Operação compartilhada com login por usuário. Se quiser, no próximo passo podemos separar permissões por área.
       </div>
     </aside>
   );
