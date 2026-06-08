@@ -47,119 +47,108 @@ export default function LoginPage() {
 
   return (
     <>
-      <div className="login-shell">
-        <div className="bg-orb orb-1" />
-        <div className="bg-orb orb-2" />
-        <div className="bg-grid" />
+      <div className="cin-shell">
+        <div className="cin-particle p1" />
+        <div className="cin-particle p2" />
+        <div className="cin-particle p3" />
+        <div className="cin-particle p4" />
+        <div className="cin-vignette" />
+        <div className="cin-grid" />
+        <div className="cin-spotlight" />
 
-        <div className="login-frame">
-          {/* PAINEL ESQUERDO */}
-          <section className="brand-side">
-            <div className="brand-top">
-              <div className="brand-pill">
-                <span className="brand-pill-dot" />
-                Plataforma SaaS de gestão
+        <div className="cin-frame">
+          {/* LADO ESQUERDO */}
+          <section className="cin-brand">
+            <div className="cin-brand-top">
+              <div className="cin-pill">
+                <span className="cin-pill-dot" />
+                Plataforma premium de gestão 3D
               </div>
 
               <h1>Mundo 3D Gestão</h1>
 
-              <p className="brand-lead">
-                Controle total da operação de impressão 3D com produção,
-                estoque, precificação, pedidos e financeiro em uma única
-                plataforma online.
+              <p className="cin-lead">
+                Transforme produção, estoque, precificação, pedidos e financeiro
+                em uma operação visualmente elegante, integrada e pronta para escalar.
               </p>
 
-              <div className="feature-list">
-                <div className="feature-item">
-                  <div className="feature-icon">✓</div>
-                  <div>
-                    <strong>Ordens de produção inteligentes</strong>
-                    <span>Baixa automática de materiais e fluxo operacional integrado.</span>
-                  </div>
-                </div>
-
-                <div className="feature-item">
-                  <div className="feature-icon">✓</div>
-                  <div>
-                    <strong>Precificação com custo real</strong>
-                    <span>Material, máquina, margem e preço sugerido no mesmo fluxo.</span>
-                  </div>
-                </div>
-
-                <div className="feature-item">
-                  <div className="feature-icon">✓</div>
-                  <div>
-                    <strong>Uso colaborativo em tempo real</strong>
-                    <span>Você e seu sócio trabalham na mesma base online.</span>
+              <div className="cin-quote-box">
+                <div className="cin-quote-line" />
+                <div>
+                  <div className="cin-quote-title">Visão de produto</div>
+                  <div className="cin-quote-text">
+                    Uma plataforma com cara de SaaS real, construída para controlar a operação e também impressionar futuros usuários.
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* MOCKUP / DASH VISUAL */}
-            <div className="mockup-wrap">
-              <div className="floating-card float-1">
-                <div className="floating-card-title">Receita prevista</div>
-                <div className="floating-card-value">R$ 18.450</div>
-                <div className="floating-card-sub">Atualizado em tempo real</div>
+            <div className="cin-mockup-zone">
+              <div className="glass-card gc-1">
+                <div className="gc-title">Receita prevista</div>
+                <div className="gc-value">R$ 38.420</div>
+                <div className="gc-foot">Inteligência comercial e operacional</div>
               </div>
 
-              <div className="floating-card float-2">
-                <div className="floating-card-title">Ordens em aberto</div>
-                <div className="floating-card-value">12</div>
-                <div className="floating-card-sub">Produção + comercial integrados</div>
+              <div className="glass-card gc-2">
+                <div className="gc-title">Ordens em andamento</div>
+                <div className="gc-value">24</div>
+                <div className="gc-foot">Controle de estoque e produção ao vivo</div>
               </div>
 
-              <div className="mockup-screen">
-                <div className="mockup-topbar">
-                  <div className="mockup-dots">
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                  <div className="mockup-top-title">Painel Executivo</div>
+              <div className="cin-screen">
+                <div className="cin-screen-head">
+                  <div className="cin-dots"><span /><span /><span /></div>
+                  <div className="cin-head-title">Executive Workspace</div>
                 </div>
 
-                <div className="mockup-body">
-                  <aside className="mockup-sidebar">
-                    <div className="mockup-logo" />
-                    <div className="mockup-nav-item active" />
-                    <div className="mockup-nav-item" />
-                    <div className="mockup-nav-item" />
-                    <div className="mockup-nav-item" />
+                <div className="cin-screen-body">
+                  <aside className="cin-side-mini">
+                    <div className="mini-logo" />
+                    <div className="mini-nav active" />
+                    <div className="mini-nav" />
+                    <div className="mini-nav" />
+                    <div className="mini-nav" />
+                    <div className="mini-nav" />
                   </aside>
 
-                  <div className="mockup-content">
-                    <div className="mockup-content-top">
-                      <div className="mockup-kpi">
+                  <div className="cin-main-mini">
+                    <div className="mini-top-cards">
+                      <div className="mini-kpi">
                         <span>Receita</span>
-                        <strong>R$ 18,4k</strong>
+                        <strong>R$ 38k</strong>
                       </div>
-                      <div className="mockup-kpi">
-                        <span>Lucro</span>
-                        <strong>R$ 6,2k</strong>
+                      <div className="mini-kpi">
+                        <span>Margem</span>
+                        <strong>61%</strong>
                       </div>
-                      <div className="mockup-kpi">
+                      <div className="mini-kpi">
                         <span>O.P.</span>
-                        <strong>12</strong>
+                        <strong>24</strong>
                       </div>
                     </div>
 
-                    <div className="mockup-chart">
-                      <div className="bar b1" />
-                      <div className="bar b2" />
-                      <div className="bar b3" />
-                      <div className="bar b4" />
-                      <div className="bar b5" />
-                      <div className="bar b6" />
+                    <div className="mini-chart-wrap">
+                      <div className="mini-chart-bar mb1" />
+                      <div className="mini-chart-bar mb2" />
+                      <div className="mini-chart-bar mb3" />
+                      <div className="mini-chart-bar mb4" />
+                      <div className="mini-chart-bar mb5" />
+                      <div className="mini-chart-bar mb6" />
                     </div>
 
-                    <div className="mockup-table">
-                      <div className="row row-head" />
-                      <div className="row" />
-                      <div className="row" />
-                      <div className="row" />
-                      <div className="row" />
+                    <div className="mini-bottom-grid">
+                      <div className="mini-card big">
+                        <div className="mini-row head" />
+                        <div className="mini-row" />
+                        <div className="mini-row" />
+                        <div className="mini-row" />
+                      </div>
+                      <div className="mini-card small">
+                        <div className="mini-donut" />
+                        <div className="mini-legend" />
+                        <div className="mini-legend short" />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -167,24 +156,23 @@ export default function LoginPage() {
             </div>
           </section>
 
-          {/* PAINEL DIREITO */}
-          <section className="form-side">
-            <div className="form-card">
-              <div className="form-badge">ACESSO DA PLATAFORMA</div>
+          {/* LADO DIREITO */}
+          <section className="cin-form-side">
+            <div className="cin-form-card">
+              <div className="cin-form-badge">CINEMATIC ACCESS</div>
 
-              <h2>{mode === 'login' ? 'Entre na sua conta' : 'Crie sua conta'}</h2>
-
-              <p className="form-subtitle">
+              <h2>{mode === 'login' ? 'Acesse sua operação' : 'Crie seu acesso'}</h2>
+              <p className="cin-form-subtitle">
                 {mode === 'login'
-                  ? 'Acesse o sistema com seu e-mail e senha para continuar sua operação.'
-                  : 'Crie seu acesso para começar a usar a plataforma.'}
+                  ? 'Entre com seu e-mail e senha para retomar sua gestão online com experiência premium.'
+                  : 'Crie sua conta para começar a usar a plataforma.'}
               </p>
 
-              {message ? <div className="form-alert success">{message}</div> : null}
-              {error ? <div className="form-alert error">{error}</div> : null}
+              {message ? <div className="cin-alert success">{message}</div> : null}
+              {error ? <div className="cin-alert error">{error}</div> : null}
 
-              <form onSubmit={handleSubmit} className="form-grid">
-                <div className="field">
+              <form onSubmit={handleSubmit} className="cin-form-grid">
+                <div className="cin-field">
                   <label>E-mail</label>
                   <input
                     type="email"
@@ -195,7 +183,7 @@ export default function LoginPage() {
                   />
                 </div>
 
-                <div className="field">
+                <div className="cin-field">
                   <label>Senha</label>
                   <input
                     type="password"
@@ -206,7 +194,7 @@ export default function LoginPage() {
                   />
                 </div>
 
-                <button type="submit" className="btn-primary" disabled={loading}>
+                <button type="submit" className="cin-btn-primary" disabled={loading}>
                   {loading
                     ? 'Aguarde...'
                     : mode === 'login'
@@ -217,7 +205,7 @@ export default function LoginPage() {
 
               <button
                 type="button"
-                className="btn-secondary"
+                className="cin-btn-secondary"
                 onClick={() => {
                   setMode(mode === 'login' ? 'signup' : 'login');
                   setError('');
@@ -227,10 +215,10 @@ export default function LoginPage() {
                 {mode === 'login' ? 'Criar conta' : 'Voltar para login'}
               </button>
 
-              <div className="trust-box">
-                <div className="trust-title">Plataforma profissional em evolução contínua</div>
-                <div className="trust-text">
-                  Estrutura online, banco em nuvem, operação multiusuário e experiência visual preparada para escalar.
+              <div className="cin-trust-box">
+                <div className="cin-trust-title">Design voltado para confiança e conversão</div>
+                <div className="cin-trust-text">
+                  Esta experiência foi desenhada para comunicar valor, elevar a percepção do produto e preparar sua plataforma para atrair usuários futuros.
                 </div>
               </div>
             </div>
@@ -239,380 +227,421 @@ export default function LoginPage() {
       </div>
 
       <style jsx>{`
-        .login-shell {
+        .cin-shell {
           min-height: 100vh;
           position: relative;
           overflow: hidden;
-          background:
-            radial-gradient(circle at top left, #2563eb 0%, #0f172a 36%, #020617 100%);
+          padding: 30px;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 28px;
+          background:
+            radial-gradient(circle at 10% 10%, #1e40af 0%, transparent 20%),
+            radial-gradient(circle at 90% 15%, #0ea5e9 0%, transparent 18%),
+            radial-gradient(circle at 80% 85%, #2563eb 0%, transparent 14%),
+            linear-gradient(135deg, #020617 0%, #0f172a 45%, #111827 100%);
         }
 
-        .bg-grid {
+        .cin-grid {
           position: absolute;
           inset: 0;
           opacity: 0.08;
           background-image:
-            linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px);
-          background-size: 36px 36px;
-          mask-image: radial-gradient(circle at center, black 30%, transparent 90%);
+            linear-gradient(rgba(255,255,255,0.18) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.18) 1px, transparent 1px);
+          background-size: 34px 34px;
+          mask-image: radial-gradient(circle at center, black 26%, transparent 85%);
           pointer-events: none;
         }
 
-        .bg-orb {
+        .cin-vignette {
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(circle at center, transparent 35%, rgba(0,0,0,0.45) 100%);
+          pointer-events: none;
+        }
+
+        .cin-spotlight {
+          position: absolute;
+          width: 900px;
+          height: 900px;
+          border-radius: 999px;
+          background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 65%);
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          pointer-events: none;
+          animation: breathe 8s ease-in-out infinite;
+        }
+
+        .cin-particle {
           position: absolute;
           border-radius: 999px;
-          filter: blur(60px);
-          opacity: 0.25;
+          filter: blur(40px);
+          opacity: 0.22;
           pointer-events: none;
         }
 
-        .orb-1 {
-          width: 340px;
-          height: 340px;
-          background: #60a5fa;
-          top: -60px;
-          left: -40px;
-          animation: drift1 10s ease-in-out infinite;
-        }
+        .p1 { width: 280px; height: 280px; top: 60px; left: 80px; background: #60a5fa; animation: floatA 11s ease-in-out infinite; }
+        .p2 { width: 220px; height: 220px; top: 120px; right: 90px; background: #38bdf8; animation: floatB 9s ease-in-out infinite; }
+        .p3 { width: 260px; height: 260px; bottom: 80px; left: 18%; background: #2563eb; animation: floatC 12s ease-in-out infinite; }
+        .p4 { width: 180px; height: 180px; bottom: 120px; right: 14%; background: #7dd3fc; animation: floatD 10s ease-in-out infinite; }
 
-        .orb-2 {
-          width: 280px;
-          height: 280px;
-          background: #38bdf8;
-          bottom: -40px;
-          right: -20px;
-          animation: drift2 12s ease-in-out infinite;
-        }
-
-        .login-frame {
+        .cin-frame {
           position: relative;
           z-index: 2;
-          width: min(1340px, 100%);
-          min-height: 760px;
+          width: min(1380px, 100%);
+          min-height: 790px;
           display: grid;
-          grid-template-columns: 1.12fr 0.88fr;
-          border-radius: 30px;
+          grid-template-columns: 1.16fr 0.84fr;
+          border-radius: 34px;
           overflow: hidden;
           background: rgba(255,255,255,0.045);
           border: 1px solid rgba(255,255,255,0.10);
-          backdrop-filter: blur(14px);
-          box-shadow: 0 30px 80px rgba(0,0,0,0.30);
+          backdrop-filter: blur(16px);
+          box-shadow: 0 40px 100px rgba(0,0,0,0.40);
         }
 
-        .brand-side {
+        .cin-brand {
           position: relative;
-          padding: 54px;
+          padding: 56px;
           color: white;
+          background:
+            linear-gradient(160deg, rgba(30,64,175,0.92), rgba(15,23,42,0.92) 55%, rgba(2,6,23,0.90));
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          background:
-            linear-gradient(160deg, rgba(37,99,235,0.92), rgba(15,23,42,0.88));
         }
 
-        .brand-side::before {
+        .cin-brand::before {
           content: '';
           position: absolute;
           inset: 0;
           background:
-            radial-gradient(circle at 18% 16%, rgba(255,255,255,0.14), transparent 28%),
-            radial-gradient(circle at 82% 22%, rgba(255,255,255,0.10), transparent 24%),
-            radial-gradient(circle at 48% 84%, rgba(255,255,255,0.08), transparent 28%);
+            radial-gradient(circle at 20% 16%, rgba(255,255,255,0.12), transparent 24%),
+            radial-gradient(circle at 84% 18%, rgba(255,255,255,0.08), transparent 20%),
+            radial-gradient(circle at 52% 86%, rgba(255,255,255,0.08), transparent 24%);
           pointer-events: none;
         }
 
-        .brand-top {
-          position: relative;
-          z-index: 2;
-        }
+        .cin-brand-top { position: relative; z-index: 2; }
 
-        .brand-pill {
+        .cin-pill {
           display: inline-flex;
           align-items: center;
           gap: 10px;
           padding: 10px 16px;
           border-radius: 999px;
-          background: rgba(255,255,255,0.12);
+          background: rgba(255,255,255,0.10);
           border: 1px solid rgba(255,255,255,0.14);
           font-size: 13px;
-          font-weight: 700;
-          letter-spacing: 0.03em;
+          font-weight: 800;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
         }
 
-        .brand-pill-dot {
+        .cin-pill-dot {
           width: 10px;
           height: 10px;
           border-radius: 999px;
           background: #93c5fd;
-          box-shadow: 0 0 14px #93c5fd;
+          box-shadow: 0 0 16px #93c5fd;
         }
 
-        .brand-top h1 {
-          margin: 26px 0 0;
-          font-size: 60px;
-          line-height: 1.02;
-          font-weight: 800;
-          letter-spacing: -0.04em;
-          max-width: 620px;
+        .cin-brand h1 {
+          margin: 28px 0 0;
+          font-size: 68px;
+          line-height: 0.98;
+          letter-spacing: -0.05em;
+          font-weight: 900;
+          max-width: 680px;
+          text-shadow: 0 8px 24px rgba(0,0,0,0.18);
         }
 
-        .brand-lead {
-          margin-top: 22px;
-          max-width: 640px;
-          font-size: 21px;
-          line-height: 1.65;
+        .cin-lead {
+          margin-top: 24px;
+          max-width: 650px;
+          font-size: 22px;
+          line-height: 1.7;
           color: rgba(255,255,255,0.93);
         }
 
-        .feature-list {
-          display: grid;
-          gap: 16px;
+        .cin-quote-box {
           margin-top: 34px;
-          max-width: 620px;
-        }
-
-        .feature-item {
           display: flex;
-          gap: 14px;
+          gap: 16px;
           align-items: flex-start;
-          padding: 18px;
-          border-radius: 20px;
+          max-width: 620px;
+          padding: 20px 22px;
+          border-radius: 22px;
           background: rgba(255,255,255,0.08);
           border: 1px solid rgba(255,255,255,0.08);
+          backdrop-filter: blur(8px);
         }
 
-        .feature-icon {
-          width: 36px;
-          height: 36px;
-          border-radius: 14px;
-          background: rgba(255,255,255,0.16);
-          display: grid;
-          place-items: center;
-          font-weight: 800;
-          flex-shrink: 0;
+        .cin-quote-line {
+          width: 4px;
+          min-height: 64px;
+          border-radius: 999px;
+          background: linear-gradient(180deg, #93c5fd, #38bdf8);
+          box-shadow: 0 0 12px rgba(147,197,253,0.5);
         }
 
-        .feature-item strong {
-          display: block;
-          font-size: 15px;
-        }
-
-        .feature-item span {
-          display: block;
-          margin-top: 5px;
+        .cin-quote-title {
           font-size: 14px;
-          line-height: 1.55;
-          color: rgba(255,255,255,0.82);
+          font-weight: 800;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          color: rgba(255,255,255,0.78);
         }
 
-        .mockup-wrap {
+        .cin-quote-text {
+          margin-top: 8px;
+          font-size: 16px;
+          line-height: 1.7;
+          color: rgba(255,255,255,0.90);
+        }
+
+        .cin-mockup-zone {
           position: relative;
           z-index: 2;
-          margin-top: 40px;
-          min-height: 300px;
+          margin-top: 42px;
+          min-height: 340px;
         }
 
-        .floating-card {
+        .glass-card {
           position: absolute;
+          width: 230px;
           padding: 18px 20px;
-          border-radius: 20px;
+          border-radius: 22px;
           background: rgba(255,255,255,0.10);
           border: 1px solid rgba(255,255,255,0.14);
           backdrop-filter: blur(10px);
-          box-shadow: 0 12px 30px rgba(0,0,0,0.18);
-          width: 220px;
+          box-shadow: 0 14px 38px rgba(0,0,0,0.20);
           z-index: 3;
         }
 
-        .float-1 {
-          top: -8px;
-          right: 20px;
-          animation: floatY 6s ease-in-out infinite;
-        }
+        .gc-1 { top: -6px; right: 18px; animation: floatSlow 7s ease-in-out infinite; }
+        .gc-2 { bottom: 20px; left: 10px; animation: floatSlow 8s ease-in-out infinite reverse; }
 
-        .float-2 {
-          bottom: 24px;
-          left: 10px;
-          animation: floatY 7s ease-in-out infinite reverse;
-        }
-
-        .floating-card-title {
+        .gc-title {
           font-size: 13px;
           color: rgba(255,255,255,0.78);
         }
 
-        .floating-card-value {
+        .gc-value {
           margin-top: 8px;
-          font-size: 30px;
-          font-weight: 800;
+          font-size: 32px;
+          font-weight: 900;
+          letter-spacing: -0.03em;
         }
 
-        .floating-card-sub {
+        .gc-foot {
           margin-top: 6px;
           font-size: 12px;
-          color: rgba(255,255,255,0.76);
+          color: rgba(255,255,255,0.74);
         }
 
-        .mockup-screen {
+        .cin-screen {
           position: relative;
           width: 100%;
-          max-width: 620px;
-          min-height: 330px;
-          border-radius: 26px;
+          max-width: 650px;
+          min-height: 360px;
+          border-radius: 30px;
           overflow: hidden;
-          background: linear-gradient(180deg, rgba(255,255,255,0.97), rgba(240,247,255,0.94));
-          box-shadow: 0 20px 50px rgba(0,0,0,0.24);
-          border: 1px solid rgba(255,255,255,0.30);
+          background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(242,247,255,0.96));
+          box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+          border: 1px solid rgba(255,255,255,0.35);
         }
 
-        .mockup-topbar {
+        .cin-screen-head {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 14px 18px;
-          border-bottom: 1px solid #e4ecf8;
-          background: rgba(255,255,255,0.85);
+          padding: 15px 18px;
+          border-bottom: 1px solid #e5edf8;
+          background: rgba(255,255,255,0.9);
         }
 
-        .mockup-dots {
+        .cin-dots {
           display: flex;
           gap: 7px;
         }
 
-        .mockup-dots span {
+        .cin-dots span {
           width: 10px;
           height: 10px;
           border-radius: 999px;
-          background: #d7e4f8;
+          background: #d8e5f6;
         }
 
-        .mockup-dots span:nth-child(1) { background: #fda4af; }
-        .mockup-dots span:nth-child(2) { background: #fde68a; }
-        .mockup-dots span:nth-child(3) { background: #86efac; }
+        .cin-dots span:nth-child(1) { background: #fda4af; }
+        .cin-dots span:nth-child(2) { background: #fde68a; }
+        .cin-dots span:nth-child(3) { background: #86efac; }
 
-        .mockup-top-title {
+        .cin-head-title {
           font-size: 13px;
+          font-weight: 800;
           color: #334155;
-          font-weight: 700;
+          letter-spacing: 0.03em;
         }
 
-        .mockup-body {
+        .cin-screen-body {
           display: grid;
-          grid-template-columns: 90px 1fr;
-          min-height: 282px;
+          grid-template-columns: 96px 1fr;
+          min-height: 310px;
         }
 
-        .mockup-sidebar {
-          background: linear-gradient(180deg, #133866, #0b2648);
+        .cin-side-mini {
+          background: linear-gradient(180deg, #133866, #0a2546);
           padding: 16px;
           display: grid;
           align-content: start;
-          gap: 16px;
+          gap: 14px;
         }
 
-        .mockup-logo {
-          height: 38px;
+        .mini-logo {
+          height: 40px;
           border-radius: 14px;
-          background: linear-gradient(135deg, #8ec5ff, #dbeeff);
-          margin-bottom: 4px;
+          background: linear-gradient(135deg, #93c5fd, #dbeeff);
+          margin-bottom: 6px;
         }
 
-        .mockup-nav-item {
+        .mini-nav {
           height: 14px;
           border-radius: 999px;
           background: rgba(255,255,255,0.18);
         }
 
-        .mockup-nav-item.active {
+        .mini-nav.active {
           background: #f8d58d;
         }
 
-        .mockup-content {
+        .cin-main-mini {
           padding: 18px;
           display: grid;
           gap: 16px;
         }
 
-        .mockup-content-top {
+        .mini-top-cards {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 12px;
         }
 
-        .mockup-kpi {
+        .mini-kpi {
           padding: 14px;
-          border-radius: 18px;
+          border-radius: 20px;
+          border: 1px solid #e7eef8;
           background: white;
-          border: 1px solid #e8eff8;
-          box-shadow: 0 8px 20px rgba(15,23,42,0.05);
+          box-shadow: 0 8px 22px rgba(15,23,42,0.05);
         }
 
-        .mockup-kpi span {
+        .mini-kpi span {
           display: block;
           font-size: 12px;
           color: #64748b;
         }
 
-        .mockup-kpi strong {
+        .mini-kpi strong {
           display: block;
           margin-top: 8px;
-          font-size: 22px;
+          font-size: 24px;
+          font-weight: 900;
           color: #0f172a;
         }
 
-        .mockup-chart {
-          height: 120px;
-          padding: 12px;
-          border-radius: 20px;
+        .mini-chart-wrap {
+          height: 125px;
+          padding: 14px;
+          border-radius: 22px;
+          border: 1px solid #e7eef8;
           background: white;
-          border: 1px solid #e8eff8;
           display: flex;
           align-items: flex-end;
           gap: 12px;
-          box-shadow: 0 8px 20px rgba(15,23,42,0.05);
+          box-shadow: 0 8px 22px rgba(15,23,42,0.05);
         }
 
-        .bar {
+        .mini-chart-bar {
           flex: 1;
-          border-radius: 12px 12px 6px 6px;
+          border-radius: 14px 14px 8px 8px;
           background: linear-gradient(180deg, #60a5fa, #1d4ed8);
-          animation: pulseBars 4s ease-in-out infinite;
+          animation: chartPulse 4.5s ease-in-out infinite;
         }
 
-        .b1 { height: 38%; animation-delay: 0s; }
-        .b2 { height: 64%; animation-delay: 0.2s; }
-        .b3 { height: 52%; animation-delay: 0.4s; }
-        .b4 { height: 78%; animation-delay: 0.6s; }
-        .b5 { height: 58%; animation-delay: 0.8s; }
-        .b6 { height: 88%; animation-delay: 1s; }
+        .mb1 { height: 36%; animation-delay: 0s; }
+        .mb2 { height: 68%; animation-delay: 0.2s; }
+        .mb3 { height: 52%; animation-delay: 0.4s; }
+        .mb4 { height: 80%; animation-delay: 0.6s; }
+        .mb5 { height: 60%; animation-delay: 0.8s; }
+        .mb6 { height: 92%; animation-delay: 1s; }
 
-        .mockup-table {
+        .mini-bottom-grid {
+          display: grid;
+          grid-template-columns: 1.25fr 0.75fr;
+          gap: 14px;
+        }
+
+        .mini-card {
+          border-radius: 22px;
+          border: 1px solid #e7eef8;
+          background: white;
+          box-shadow: 0 8px 22px rgba(15,23,42,0.05);
+          padding: 16px;
+        }
+
+        .mini-card.big {
           display: grid;
           gap: 10px;
-          padding: 16px;
-          border-radius: 20px;
-          background: white;
-          border: 1px solid #e8eff8;
-          box-shadow: 0 8px 20px rgba(15,23,42,0.05);
         }
 
-        .row {
+        .mini-row {
           height: 12px;
           border-radius: 999px;
           background: #e9f0f8;
         }
 
-        .row-head {
-          width: 68%;
-          background: #d8e6f8;
+        .mini-row.head {
+          width: 70%;
+          background: #dbe8f8;
         }
 
-        .form-side {
+        .mini-card.small {
+          display: grid;
+          align-content: center;
+          justify-items: center;
+          gap: 12px;
+        }
+
+        .mini-donut {
+          width: 82px;
+          height: 82px;
+          border-radius: 999px;
+          background: conic-gradient(#2563eb 0 62%, #dbeafe 62% 100%);
+          position: relative;
+        }
+
+        .mini-donut::after {
+          content: '';
+          position: absolute;
+          inset: 14px;
+          border-radius: 999px;
+          background: white;
+        }
+
+        .mini-legend {
+          height: 10px;
+          width: 88%;
+          border-radius: 999px;
+          background: #dbeafe;
+        }
+
+        .mini-legend.short {
+          width: 64%;
+        }
+
+        .cin-form-side {
           display: flex;
           align-items: center;
           justify-content: center;
@@ -620,17 +649,17 @@ export default function LoginPage() {
           background: linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
         }
 
-        .form-card {
+        .cin-form-card {
           width: 100%;
-          max-width: 470px;
-          background: rgba(255,255,255,0.98);
-          border-radius: 30px;
-          padding: 38px;
-          border: 1px solid #e8eef7;
+          max-width: 490px;
+          background: rgba(255,255,255,0.985);
+          border-radius: 32px;
+          padding: 40px;
+          border: 1px solid #e7edf7;
           box-shadow: 0 24px 60px rgba(15,23,42,0.10);
         }
 
-        .form-badge {
+        .cin-form-badge {
           display: inline-flex;
           padding: 8px 14px;
           border-radius: 999px;
@@ -638,63 +667,63 @@ export default function LoginPage() {
           color: #1d4ed8;
           font-size: 12px;
           font-weight: 800;
-          letter-spacing: 0.04em;
+          letter-spacing: 0.05em;
         }
 
-        .form-card h2 {
+        .cin-form-card h2 {
           margin-top: 18px;
-          font-size: 40px;
-          line-height: 1.08;
-          font-weight: 800;
-          letter-spacing: -0.03em;
+          font-size: 42px;
+          line-height: 1.04;
+          letter-spacing: -0.04em;
+          font-weight: 900;
           color: #0f172a;
         }
 
-        .form-subtitle {
+        .cin-form-subtitle {
           margin-top: 12px;
           color: #64748b;
           font-size: 16px;
-          line-height: 1.6;
+          line-height: 1.65;
         }
 
-        .form-alert {
+        .cin-alert {
           margin-top: 18px;
           padding: 14px 16px;
-          border-radius: 14px;
+          border-radius: 16px;
           font-size: 14px;
           line-height: 1.5;
         }
 
-        .form-alert.success {
+        .cin-alert.success {
           background: #ecfdf3;
           border: 1px solid #bbf7d0;
           color: #166534;
         }
 
-        .form-alert.error {
+        .cin-alert.error {
           background: #fff1f2;
           border: 1px solid #fecdd3;
           color: #be123c;
         }
 
-        .form-grid {
+        .cin-form-grid {
           margin-top: 26px;
           display: grid;
           gap: 18px;
         }
 
-        .field label {
+        .cin-field label {
           display: block;
           margin-bottom: 8px;
           font-size: 14px;
-          font-weight: 700;
+          font-weight: 800;
           color: #334155;
         }
 
-        .field input {
+        .cin-field input {
           width: 100%;
-          padding: 15px 16px;
-          border-radius: 16px;
+          padding: 16px 16px;
+          border-radius: 18px;
           border: 1px solid #dbe4f0;
           background: #fbfdff;
           outline: none;
@@ -702,137 +731,150 @@ export default function LoginPage() {
           transition: 0.2s ease;
         }
 
-        .field input:focus {
+        .cin-field input:focus {
           border-color: #60a5fa;
           box-shadow: 0 0 0 4px rgba(96,165,250,0.14);
         }
 
-        .btn-primary {
+        .cin-btn-primary {
           margin-top: 6px;
           width: 100%;
           padding: 16px 18px;
           border: none;
-          border-radius: 18px;
+          border-radius: 20px;
           background: linear-gradient(135deg, #1d4ed8, #2563eb);
           color: white;
           font-size: 16px;
-          font-weight: 800;
+          font-weight: 900;
+          letter-spacing: 0.01em;
           cursor: pointer;
-          box-shadow: 0 14px 28px rgba(37,99,235,0.28);
-          transition: transform 0.18s ease, box-shadow 0.18s ease;
+          box-shadow: 0 18px 36px rgba(37,99,235,0.28);
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
-        .btn-primary:hover {
+        .cin-btn-primary:hover {
           transform: translateY(-1px);
-          box-shadow: 0 18px 34px rgba(37,99,235,0.34);
+          box-shadow: 0 22px 42px rgba(37,99,235,0.34);
         }
 
-        .btn-secondary {
+        .cin-btn-secondary {
           margin-top: 16px;
           width: 100%;
           padding: 15px 18px;
-          border-radius: 18px;
+          border-radius: 20px;
           border: 1px solid #d8e3f1;
           background: #f8fbff;
           color: #1d4ed8;
           font-size: 15px;
-          font-weight: 800;
+          font-weight: 900;
           cursor: pointer;
           transition: 0.18s ease;
         }
 
-        .btn-secondary:hover {
+        .cin-btn-secondary:hover {
           background: #eef5ff;
         }
 
-        .trust-box {
+        .cin-trust-box {
           margin-top: 24px;
           padding-top: 22px;
-          border-top: 1px solid #e7edf6;
+          border-top: 1px solid #e8eef7;
         }
 
-        .trust-title {
+        .cin-trust-title {
           font-size: 14px;
-          font-weight: 800;
+          font-weight: 900;
           color: #0f172a;
         }
 
-        .trust-text {
+        .cin-trust-text {
           margin-top: 8px;
           font-size: 13px;
           line-height: 1.7;
           color: #64748b;
         }
 
-        @keyframes floatY {
+        @keyframes floatSlow {
           0%, 100% { transform: translateY(0px); }
           50% { transform: translateY(-10px); }
         }
 
-        @keyframes pulseBars {
+        @keyframes chartPulse {
           0%, 100% { opacity: 0.92; }
           50% { opacity: 1; }
         }
 
-        @keyframes drift1 {
-          0%, 100% { transform: translate(0, 0); }
-          50% { transform: translate(20px, 16px); }
+        @keyframes breathe {
+          0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+          50% { transform: translate(-50%, -50%) scale(1.06); opacity: 0.68; }
         }
 
-        @keyframes drift2 {
+        @keyframes floatA {
           0%, 100% { transform: translate(0, 0); }
-          50% { transform: translate(-18px, -14px); }
+          50% { transform: translate(24px, 14px); }
         }
 
-        @media (max-width: 1180px) {
-          .login-frame {
+        @keyframes floatB {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(-22px, 16px); }
+        }
+
+        @keyframes floatC {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(16px, -16px); }
+        }
+
+        @keyframes floatD {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(-16px, -14px); }
+        }
+
+        @media (max-width: 1220px) {
+          .cin-frame {
             grid-template-columns: 1fr;
           }
 
-          .brand-side {
+          .cin-brand {
             padding: 38px;
           }
 
-          .mockup-wrap {
-            margin-top: 28px;
-          }
-
-          .form-side {
-            padding: 26px;
+          .cin-form-side {
+            padding: 28px;
           }
         }
 
         @media (max-width: 760px) {
-          .login-shell {
+          .cin-shell {
             padding: 18px;
           }
 
-          .brand-side {
+          .cin-brand {
             padding: 28px;
           }
 
-          .brand-top h1 {
-            font-size: 42px;
+          .cin-brand h1 {
+            font-size: 46px;
           }
 
-          .brand-lead {
+          .cin-lead {
             font-size: 18px;
           }
 
-          .form-card {
-            padding: 26px;
+          .cin-form-card {
+            padding: 28px;
             border-radius: 24px;
           }
 
-          .form-card h2 {
-            font-size: 32px;
+          .cin-form-card h2 {
+            font-size: 34px;
           }
 
-          .mockup-content-top {
+          .mini-top-cards,
+          .mini-bottom-grid {
             grid-template-columns: 1fr;
           }
 
-          .floating-card {
+          .glass-card {
             position: relative;
             width: 100%;
             top: auto;
