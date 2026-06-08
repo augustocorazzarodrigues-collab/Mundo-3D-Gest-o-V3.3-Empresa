@@ -1,10 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { signOutUser } from '@/lib/auth';
+import { getCurrentCompany } from '@/lib/company';
+import { filterLinksByRole } from '@/lib/permissions';
 
 const links = [
   { href:'/inicio', label:'Início', icon:'🏠' },
@@ -28,18 +30,41 @@ const links = [
   { href:'/comercial/financeiro', label:'Financeiro', icon:'🏦' },
 ];
 
+const roleLabel = {
+  owner: 'Owner',
+  admin: 'Admin',
+  comercial: 'Comercial',
+  operacional: 'Operacional',
+  financeiro: 'Financeiro',
+  viewer: 'Leitura',
+};
+
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [email, setEmail] = useState('');
+  const [companyName, setCompanyName] = useState('Carregando...');
+  const [role, setRole] = useState('viewer');
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    async function loadContext() {
+      const { data } = await supabase.auth.getSession();
       setEmail(data?.session?.user?.email || '');
-    });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setEmail(session?.user?.email || '');
+      try {
+        const company = await getCurrentCompany();
+        setCompanyName(company.company_name || 'Empresa');
+        setRole(company.role || 'viewer');
+      } catch {
+        setCompanyName('Sem empresa');
+        setRole('viewer');
+      }
+    }
+
+    loadContext();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
+      loadContext();
     });
 
     return () => authListener?.subscription?.unsubscribe?.();
@@ -50,31 +75,38 @@ export default function Sidebar() {
     router.replace('/login');
   }
 
+  const visibleLinks = useMemo(() => filterLinksByRole(links, role), [role]);
+
   return (
     <aside className="sidebar">
       <div className="brand">
         <div className="brand-badge" />
         <div>
           <h1>Mundo 3D</h1>
-          <div className="brand-subtitle">Gestão • V3.3 FULL Banco</div>
+          <div className="brand-subtitle">Gestão • V4 Multiempresa</div>
         </div>
       </div>
 
       <div className="sidebar-card">
-        Dados centralizados no Supabase. O que você alterar aparece para o seu sócio e vice-versa, tudo online.
+        <strong>Empresa atual:</strong><br />
+        {companyName}
       </div>
 
       <div className="sidebar-card">
         <strong>Usuário logado:</strong><br />
         {email || 'Não identificado'}
         <div style={{ marginTop: 10 }}>
+          <strong>Perfil:</strong><br />
+          {roleLabel[role] || role}
+        </div>
+        <div style={{ marginTop: 12 }}>
           <button className="btn-secondary" onClick={handleLogout}>Sair</button>
         </div>
       </div>
 
       <div className="sidebar-title">Navegação</div>
       <nav className="nav-list">
-        {links.map((item, index) => item.title ? (
+        {visibleLinks.map((item, index) => item.title ? (
           <div key={`t-${index}`} className="sidebar-title" style={{ marginTop: 12 }}>{item.title}</div>
         ) : (
           <Link key={item.href} href={item.href} className={`nav-item ${pathname === item.href ? 'active' : ''}`}>
@@ -85,7 +117,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="sidebar-card">
-        Operação compartilhada com login por usuário. Se quiser, no próximo passo podemos separar permissões por área.
+        O menu agora respeita o perfil do usuário. Se quiser, no próximo passo podemos separar também permissões por ação (ex.: pode ver, mas não pode editar).
       </div>
     </aside>
   );
