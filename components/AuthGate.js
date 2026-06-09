@@ -39,9 +39,7 @@ export default function AuthGate({ children }) {
 
         const hasCompany = !!membership?.company_id;
 
-        // 3) Se estiver logado mas ainda NÃO tem empresa:
-        //    - pode acessar /onboarding
-        //    - qualquer outra rota vai para /onboarding
+        // 3) Se estiver logado mas ainda NÃO tem empresa
         if (!hasCompany) {
           if (pathname !== '/onboarding') {
             router.replace('/onboarding');
@@ -52,9 +50,7 @@ export default function AuthGate({ children }) {
           return;
         }
 
-        // 4) Se estiver logado e JÁ tem empresa:
-        //    - não deve voltar para /login
-        //    - não deve ficar em /onboarding
+        // 4) Se estiver logado e JÁ tem empresa
         if (pathname === '/login' || pathname === '/onboarding') {
           router.replace('/inicio');
           return;
