@@ -6,7 +6,11 @@ import { supabase } from '@/lib/supabase';
 import { getSession } from '@/lib/auth';
 import { getCurrentCompany } from '@/lib/company';
 import { hasRouteAccess } from '@/lib/permissions';
-import { getMyCompanyMembership } from '@/lib/service';
+import {
+  getMyCompanyMembership,
+  getMyPendingInvite,
+  acceptMyPendingInvite
+} from '@/lib/service';
 
 export default function AuthGate({ children }) {
   const pathname = usePathname();
@@ -19,6 +23,8 @@ export default function AuthGate({ children }) {
 
     async function boot() {
       try {
+        setError('');
+
         const sess = await getSession();
         if (!active) return;
 
@@ -41,6 +47,21 @@ export default function AuthGate({ children }) {
 
         // 3) Se estiver logado mas ainda NÃO tem empresa
         if (!hasCompany) {
+          const invite = await getMyPendingInvite();
+          if (!active) return;
+
+          const hasInvite = !!invite?.has_invite;
+
+          // 3A) Se tem convite pendente -> aceita automaticamente
+          if (hasInvite) {
+            await acceptMyPendingInvite();
+            if (!active) return;
+
+            router.replace('/inicio');
+            return;
+          }
+
+          // 3B) Se não tem convite -> onboarding
           if (pathname !== '/onboarding') {
             router.replace('/onboarding');
             return;
@@ -68,37 +89,16 @@ export default function AuthGate({ children }) {
         setReady(true);
       } catch (e) {
         if (!active) return;
-        setError(e.message || 'Erro ao validar login/perfil/empresa');
+        console.error('Erro no AuthGate:', e);
+        setError(e.message || 'Erro ao validar login/perfil/empresa/convite');
         setReady(true);
       }
     }
 
     boot();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, sess) => {
-      if (!sess && pathname !== '/login') {
-        router.replace('/login');
-        return;
-      }
-
-      if (sess) {
-        try {
-          const membership = await getMyCompanyMembership();
-          const hasCompany = !!membership?.company_id;
-
-          if (!hasCompany && pathname !== '/onboarding') {
-            router.replace('/onboarding');
-            return;
-          }
-
-          if (hasCompany && (pathname === '/login' || pathname === '/onboarding')) {
-            router.replace('/inicio');
-            return;
-          }
-        } catch (e) {
-          console.error('Erro no onAuthStateChange:', e);
-        }
-      }
+    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
+      boot();
     });
 
     return () => {
@@ -111,7 +111,7 @@ export default function AuthGate({ children }) {
     return (
       <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#e9edf3' }}>
         <div className="surface panel" style={{ width: 460 }}>
-          <h3 className="section-title">Validando acesso, empresa e perfil...</h3>
+          <h3 className="section-title">Validando acesso, empresa, convite e perfil...</h3>
           <div className="note">Aguarde um instante.</div>
         </div>
       </div>
