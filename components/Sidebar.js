@@ -11,6 +11,10 @@ import { filterLinksByRole } from '@/lib/permissions';
 const links = [
   { href:'/inicio', label:'Início', icon:'🏠' },
   { href:'/dashboard-geral', label:'Dashboard Geral', icon:'📊' },
+
+  { title:'Administração' },
+  { href:'/usuarios', label:'Usuários', icon:'👤' },
+
   { title:'Operacional' },
   { href:'/operacional/dashboard-operacional', label:'Dashboard Operacional', icon:'🏭' },
   { href:'/operacional/produtos', label:'Produtos', icon:'📦' },
@@ -20,6 +24,7 @@ const links = [
   { href:'/operacional/ordens-producao', label:'Ordens Produção', icon:'🛠️' },
   { href:'/operacional/projetos', label:'Projetos', icon:'🧩' },
   { href:'/operacional/precificacao', label:'Precificação', icon:'💹' },
+
   { title:'Comercial' },
   { href:'/comercial/dashboard-comercial', label:'Dashboard Comercial', icon:'📈' },
   { href:'/comercial/clientes', label:'Clientes', icon:'👥' },
