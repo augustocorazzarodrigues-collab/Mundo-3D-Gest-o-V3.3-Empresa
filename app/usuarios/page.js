@@ -5,7 +5,9 @@ import {
   createCompanyInvite,
   listMyCompanyInvites,
   cancelCompanyInvite,
-  listMyCompanyActiveUsers
+  listMyCompanyActiveUsers,
+  listMyCompanyPermissions,
+  saveMyCompanyUserPermission
 } from '@/lib/service';
 import { getCurrentCompany } from '@/lib/company';
 import { useRouter } from 'next/navigation';
@@ -55,6 +57,7 @@ export default function UsuariosPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [cancelingId, setCancelingId] = useState(null);
+  const [savingKey, setSavingKey] = useState('');
 
   const [invites, setInvites] = useState([]);
   const [activeUsers, setActiveUsers] = useState([]);
@@ -78,9 +81,10 @@ export default function UsuariosPage() {
         return;
       }
 
-      const [allInvites, users] = await Promise.all([
+      const [allInvites, users, permissions] = await Promise.all([
         listMyCompanyInvites(),
-        listMyCompanyActiveUsers()
+        listMyCompanyActiveUsers(),
+        listMyCompanyPermissions()
       ]);
 
       const pendingInvites = (allInvites || []).filter(
@@ -89,6 +93,17 @@ export default function UsuariosPage() {
 
       setInvites(pendingInvites);
       setActiveUsers(users || []);
+
+      const mappedPermissions = {};
+      (permissions || []).forEach((item) => {
+        if (!mappedPermissions[item.company_user_id]) {
+          mappedPermissions[item.company_user_id] = {};
+        }
+
+        mappedPermissions[item.company_user_id][item.app_tab] = item.permission_level;
+      });
+
+      setAccessControl(mappedPermissions);
     } catch (err) {
       setError(err.message || 'Erro ao carregar dados.');
     } finally {
@@ -148,14 +163,30 @@ export default function UsuariosPage() {
     };
   }
 
-  function updateAccess(userId, tabName, permission) {
-    setAccessControl((prev) => ({
-      ...prev,
-      [userId]: {
-        ...(prev[userId] || {}),
-        [tabName]: permission
-      }
-    }));
+  async function updateAccess(userId, tabName, permission) {
+    const saveId = `${userId}::${tabName}`;
+
+    try {
+      setSavingKey(saveId);
+      setError('');
+      setSuccess('');
+
+      setAccessControl((prev) => ({
+        ...prev,
+        [userId]: {
+          ...(prev[userId] || {}),
+          [tabName]: permission
+        }
+      }));
+
+      await saveMyCompanyUserPermission(userId, tabName, permission);
+      setSuccess(`Permissão de ${tabName} atualizada com sucesso.`);
+    } catch (err) {
+      setError(err.message || 'Erro ao salvar permissão.');
+      await loadData();
+    } finally {
+      setSavingKey('');
+    }
   }
 
   if (loading) {
@@ -340,7 +371,7 @@ export default function UsuariosPage() {
               <div>
                 <h2 style={styles.cardTitle}>Painel de controle de usuários</h2>
                 <p style={styles.cardDescription}>
-                  Exibe apenas usuários ativos da empresa. Convites rejeitados, cancelados ou pendentes não aparecem aqui.
+                  Exibe apenas usuários ativos da empresa. Agora as permissões são salvas no banco em tempo real.
                 </p>
               </div>
 
@@ -393,8 +424,9 @@ export default function UsuariosPage() {
                         <div style={styles.permissionsTitle}>Permissões por aba</div>
 
                         {APP_TABS.map((tab) => {
-                          const currentPermission =
-                            accessControl[userKey]?.[tab] || 'view';
+                          const currentPermission = accessControl[userKey]?.[tab] || 'view';
+                          const rowSavingKey = `${userKey}::${tab}`;
+                          const isSaving = savingKey === rowSavingKey;
 
                           return (
                             <div key={tab} style={styles.permissionRow}>
@@ -410,6 +442,7 @@ export default function UsuariosPage() {
                                       ? styles.permissionButtonActiveLight
                                       : {})
                                   }}
+                                  disabled={isSaving}
                                 >
                                   Não visualiza
                                 </button>
@@ -423,6 +456,7 @@ export default function UsuariosPage() {
                                       ? styles.permissionButtonActiveBlue
                                       : {})
                                   }}
+                                  disabled={isSaving}
                                 >
                                   Visualiza
                                 </button>
@@ -436,9 +470,14 @@ export default function UsuariosPage() {
                                       ? styles.permissionButtonActiveDark
                                       : {})
                                   }}
+                                  disabled={isSaving}
                                 >
                                   Visualiza e altera
                                 </button>
+                              </div>
+
+                              <div style={styles.permissionStatus}>
+                                {isSaving ? 'Salvando...' : 'Salvo'}
                               </div>
                             </div>
                           );
@@ -877,24 +916,22 @@ const styles = {
     marginBottom: 14
   },
   permissionRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
+    display: 'grid',
+    gridTemplateColumns: '160px 1fr 90px',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
     padding: '12px 0',
     borderBottom: '1px solid #E5EEFF'
   },
   permissionTabName: {
     fontSize: 14,
     fontWeight: 700,
-    color: '#334155',
-    minWidth: 140
+    color: '#334155'
   },
   permissionOptions: {
     display: 'flex',
     gap: 8,
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end'
+    flexWrap: 'wrap'
   },
   permissionButton: {
     height: 34,
@@ -921,5 +958,11 @@ const styles = {
     background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
     color: '#FFFFFF',
     border: '1px solid #2563EB'
+  },
+  permissionStatus: {
+    textAlign: 'right',
+    fontSize: 12,
+    fontWeight: 700,
+    color: '#64748B'
   }
 };
