@@ -436,8 +436,8 @@ export default function UsuariosPage() {
                                   style={{
                                     ...styles.permissionButton,
                                     ...(currentPermission === 'edit'
-                                      ? styles.permissionButtonActiveDark)
-                                      : {}
+                                      ? styles.permissionButtonActiveDark
+                                      : {})
                                   }}
                                 >
                                   Visualiza e altera
@@ -885,7 +885,7 @@ const styles = {
     alignItems: 'center',
     gap: 16,
     padding: '12px 0',
-    borderBottom: '1px solid #E5EEFf'
+    borderBottom: '1px solid #E5EEFF'
   },
   permissionTabName: {
     fontSize: 14,
