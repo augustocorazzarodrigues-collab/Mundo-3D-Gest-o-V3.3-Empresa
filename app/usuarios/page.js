@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import {
   createCompanyInvite,
   listMyCompanyInvites,
-  cancelCompanyInvite
+  cancelCompanyInvite,
+  listMyCompanyActiveUsers
 } from '@/lib/service';
 import { getCurrentCompany } from '@/lib/company';
 import { useRouter } from 'next/navigation';
@@ -56,7 +57,7 @@ export default function UsuariosPage() {
   const [cancelingId, setCancelingId] = useState(null);
 
   const [invites, setInvites] = useState([]);
-  const [activeUsers, setActiveUsers] = useState([]); // por enquanto vazio: não mostra owner
+  const [activeUsers, setActiveUsers] = useState([]);
   const [accessControl, setAccessControl] = useState({});
 
   const [email, setEmail] = useState('');
@@ -72,25 +73,22 @@ export default function UsuariosPage() {
 
       const company = await getCurrentCompany();
 
-      // Só owner pode acessar
       if (company.role !== 'owner') {
         router.replace('/inicio');
         return;
       }
 
-      const allInvites = await listMyCompanyInvites();
+      const [allInvites, users] = await Promise.all([
+        listMyCompanyInvites(),
+        listMyCompanyActiveUsers()
+      ]);
 
-      // Mostrar apenas convites pendentes
       const pendingInvites = (allInvites || []).filter(
         (inv) => inv.status === 'pending'
       );
 
       setInvites(pendingInvites);
-
-      // Painel de usuários ativos:
-      // neste momento fica vazio, porque você não quer exibir o owner
-      // e hoje não há outros usuários ativos cadastrados.
-      setActiveUsers([]);
+      setActiveUsers(users || []);
     } catch (err) {
       setError(err.message || 'Erro ao carregar dados.');
     } finally {
@@ -204,7 +202,6 @@ export default function UsuariosPage() {
       )}
 
       <div style={styles.mainGrid}>
-        {/* ESQUERDA */}
         <div style={styles.leftColumn}>
           <div style={styles.card}>
             <div style={styles.cardHeader}>
@@ -337,7 +334,6 @@ export default function UsuariosPage() {
           </div>
         </div>
 
-        {/* DIREITA */}
         <div style={styles.rightColumn}>
           <div style={styles.card}>
             <div style={styles.cardHeader}>
@@ -363,9 +359,10 @@ export default function UsuariosPage() {
               <div style={styles.userControlList}>
                 {activeUsers.map((user) => {
                   const roleStyle = getRoleStyle(user.role);
+                  const userKey = user.company_user_id || user.user_id || user.id;
 
                   return (
-                    <div key={user.id} style={styles.userControlCard}>
+                    <div key={userKey} style={styles.userControlCard}>
                       <div style={styles.userHeader}>
                         <div style={styles.avatarCircleBlue}>
                           {(user.name || user.email || '?').charAt(0).toUpperCase()}
@@ -397,7 +394,7 @@ export default function UsuariosPage() {
 
                         {APP_TABS.map((tab) => {
                           const currentPermission =
-                            accessControl[user.id]?.[tab] || 'view';
+                            accessControl[userKey]?.[tab] || 'view';
 
                           return (
                             <div key={tab} style={styles.permissionRow}>
@@ -406,7 +403,7 @@ export default function UsuariosPage() {
                               <div style={styles.permissionOptions}>
                                 <button
                                   type="button"
-                                  onClick={() => updateAccess(user.id, tab, 'none')}
+                                  onClick={() => updateAccess(userKey, tab, 'none')}
                                   style={{
                                     ...styles.permissionButton,
                                     ...(currentPermission === 'none'
@@ -419,7 +416,7 @@ export default function UsuariosPage() {
 
                                 <button
                                   type="button"
-                                  onClick={() => updateAccess(user.id, tab, 'view')}
+                                  onClick={() => updateAccess(userKey, tab, 'view')}
                                   style={{
                                     ...styles.permissionButton,
                                     ...(currentPermission === 'view'
@@ -432,7 +429,7 @@ export default function UsuariosPage() {
 
                                 <button
                                   type="button"
-                                  onClick={() => updateAccess(user.id, tab, 'edit')}
+                                  onClick={() => updateAccess(userKey, tab, 'edit')}
                                   style={{
                                     ...styles.permissionButton,
                                     ...(currentPermission === 'edit'
