@@ -95,6 +95,7 @@ export default function UsuariosPage() {
       setActiveUsers(users || []);
 
       const mappedPermissions = {};
+
       (permissions || []).forEach((item) => {
         if (!mappedPermissions[item.company_user_id]) {
           mappedPermissions[item.company_user_id] = {};
@@ -284,7 +285,11 @@ export default function UsuariosPage() {
                 </select>
               </div>
 
-              <button type="submit" style={styles.primaryButton} disabled={submitting}>
+              <button
+                type="submit"
+                style={styles.primaryButton}
+                disabled={submitting}
+              >
                 {submitting ? 'Criando convite...' : 'Criar convite'}
               </button>
             </form>
@@ -424,7 +429,9 @@ export default function UsuariosPage() {
                         <div style={styles.permissionsTitle}>Permissões por aba</div>
 
                         {APP_TABS.map((tab) => {
-                          const currentPermission = accessControl[userKey]?.[tab] || 'view';
+                          const currentPermission =
+                            accessControl[userKey]?.[tab] || 'view';
+
                           const rowSavingKey = `${userKey}::${tab}`;
                           const isSaving = savingKey === rowSavingKey;
 
