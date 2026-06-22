@@ -5,7 +5,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getSession } from '@/lib/auth';
 import { getCurrentCompany } from '@/lib/company';
-import { hasRouteAccess } from '@/lib/permissions';
+import {
+  hasRouteAccess,
+  canAccessPath,
+  getMyMenuPermissions
+} from '@/lib/permissions';
 import {
   getMyCompanyMembership,
   getMyPendingInvite,
@@ -77,11 +81,35 @@ export default function AuthGate({ children }) {
           return;
         }
 
-        // 5) Mantém a lógica existente de perfil por rota
+        // 5) Buscar contexto da empresa / papel do usuário
         const company = await getCurrentCompany();
         if (!active) return;
 
+        // 6) Primeiro mantém a lógica antiga de perfil por rota
         if (!hasRouteAccess(company.role, pathname)) {
+          router.replace('/inicio');
+          return;
+        }
+
+        // 7) Depois aplica a nova lógica fina por permissões reais da aba
+        let permissionsContext = {
+          role: company.role || 'viewer',
+          permissions: {}
+        };
+
+        try {
+          permissionsContext = await getMyMenuPermissions();
+        } catch {
+          permissionsContext = {
+            role: company.role || 'viewer',
+            permissions: {}
+          };
+        }
+
+        const finalRole = permissionsContext.role || company.role || 'viewer';
+        const finalPermissions = permissionsContext.permissions || {};
+
+        if (!canAccessPath(finalRole, finalPermissions, pathname)) {
           router.replace('/inicio');
           return;
         }
@@ -90,7 +118,7 @@ export default function AuthGate({ children }) {
       } catch (e) {
         if (!active) return;
         console.error('Erro no AuthGate:', e);
-        setError(e.message || 'Erro ao validar login/perfil/empresa/convite');
+        setError(e.message || 'Erro ao validar login/perfil/empresa/convite/permissões');
         setReady(true);
       }
     }
@@ -109,9 +137,18 @@ export default function AuthGate({ children }) {
 
   if (!ready) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#e9edf3' }}>
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'grid',
+          placeItems: 'center',
+          background: '#e9edf3'
+        }}
+      >
         <div className="surface panel" style={{ width: 460 }}>
-          <h3 className="section-title">Validando acesso, empresa, convite e perfil...</h3>
+          <h3 className="section-title">
+            Validando acesso, empresa, convite, perfil e permissões...
+          </h3>
           <div className="note">Aguarde um instante.</div>
         </div>
       </div>
@@ -120,7 +157,14 @@ export default function AuthGate({ children }) {
 
   if (error) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#e9edf3' }}>
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'grid',
+          placeItems: 'center',
+          background: '#e9edf3'
+        }}
+      >
         <div className="surface panel" style={{ width: 560 }}>
           <h3 className="section-title">Erro de autenticação/perfil</h3>
           <div className="alert-box">{error}</div>
