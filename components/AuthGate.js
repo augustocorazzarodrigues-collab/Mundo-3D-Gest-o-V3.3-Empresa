@@ -4,16 +4,12 @@ import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getSession } from '@/lib/auth';
-import { getCurrentCompany } from '@/lib/company';
-import {
-  hasRouteAccess,
-  canAccessPath,
-  getMyMenuPermissions
-} from '@/lib/permissions';
+import { normalizePermissions, canAccessPath } from '@/lib/permissions';
 import {
   getMyCompanyMembership,
   getMyPendingInvite,
-  acceptMyPendingInvite
+  acceptMyPendingInvite,
+  getMySidebarContext
 } from '@/lib/service';
 
 export default function AuthGate({ children }) {
@@ -84,11 +80,12 @@ export default function AuthGate({ children }) {
           return;
         }
 
-        // 5) Buscar contexto da empresa / perfil
-        const company = await getCurrentCompany();
+        // 5) Buscar contexto real do usuário para menu + permissões
+        const rows = await getMySidebarContext();
         if (!active) return;
 
-        if (!hasRouteAccess(company.role, pathname)) {
+        if (!rows || rows.length === 0) {
+          // fallback seguro
           if (pathname !== '/inicio') {
             router.replace('/inicio');
             return;
@@ -98,27 +95,12 @@ export default function AuthGate({ children }) {
           return;
         }
 
-        // 6) Permissões reais por aba
-        let menuContext = {
-          role: company.role || 'viewer',
-          permissions: {}
-        };
+        const role = rows[0]?.role || 'viewer';
+        const permissions = normalizePermissions(rows);
 
-        try {
-          menuContext = await getMyMenuPermissions();
-        } catch {
-          menuContext = {
-            role: company.role || 'viewer',
-            permissions: {}
-          };
-        }
+        const allowed = canAccessPath(role, permissions, pathname);
 
-        const finalRole = menuContext.role || company.role || 'viewer';
-        const finalPermissions = menuContext.permissions || {};
-
-        const allowed = canAccessPath(finalRole, finalPermissions, pathname);
-
-        // Evita loop infinito se o fallback já estiver em /inicio
+        // evita loop infinito em /inicio
         if (!allowed) {
           if (pathname !== '/inicio') {
             router.replace('/inicio');
@@ -190,3 +172,4 @@ export default function AuthGate({ children }) {
 
   return children;
 }
+``
