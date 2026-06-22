@@ -198,7 +198,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="sidebar-card">
-        O menu agora respeita o perfil do usuário e também as permissões reais por aba configuradas na tela de usuários.
+        O menu agora respeita as permissões reais por aba configuradas na tela de usuários.
       </div>
     </aside>
   );
