@@ -7,32 +7,33 @@ import { supabase } from '@/lib/supabase';
 import { signOutUser } from '@/lib/auth';
 import { getCurrentCompany } from '@/lib/company';
 import { filterLinksByRole } from '@/lib/permissions';
+import { filterMenuItemsByPermissions, getMyMenuPermissions } from '@/lib/menu-permissions';
 
 const links = [
-  { href:'/inicio', label:'Início', icon:'🏠' },
-  { href:'/dashboard-geral', label:'Dashboard Geral', icon:'📊' },
+  { href: '/inicio', label: 'Início', icon: '🏠', tabKey: 'Início' },
+  { href: '/dashboard-geral', label: 'Dashboard Geral', icon: '📊', tabKey: 'Dashboard Geral' },
 
-  { title:'Administração' },
-  { href:'/usuarios', label:'Usuários', icon:'👤' },
+  { title: 'Administração' },
+  { href: '/usuarios', label: 'Usuários', icon: '👤', tabKey: 'Usuários' },
 
-  { title:'Operacional' },
-  { href:'/operacional/dashboard-operacional', label:'Dashboard Operacional', icon:'🏭' },
-  { href:'/operacional/produtos', label:'Produtos', icon:'📦' },
-  { href:'/operacional/maquinas', label:'Máquinas', icon:'🖨️' },
-  { href:'/operacional/estoque', label:'Estoque', icon:'📚' },
-  { href:'/operacional/mov-estoque', label:'Mov. Estoque', icon:'🔄' },
-  { href:'/operacional/ordens-producao', label:'Ordens Produção', icon:'🛠️' },
-  { href:'/operacional/projetos', label:'Projetos', icon:'🧩' },
-  { href:'/operacional/precificacao', label:'Precificação', icon:'💹' },
+  { title: 'Operacional' },
+  { href: '/operacional/dashboard-operacional', label: 'Dashboard Operacional', icon: '🏭', tabKey: 'Dashboard Operacional' },
+  { href: '/operacional/produtos', label: 'Produtos', icon: '📦', tabKey: 'Produtos' },
+  { href: '/operacional/maquinas', label: 'Máquinas', icon: '🖨️', tabKey: 'Máquinas' },
+  { href: '/operacional/estoque', label: 'Estoque', icon: '📚', tabKey: 'Estoque' },
+  { href: '/operacional/mov-estoque', label: 'Mov. Estoque', icon: '🔄', tabKey: 'Mov. Estoque' },
+  { href: '/operacional/ordens-producao', label: 'Ordens Produção', icon: '🛠️', tabKey: 'Ordens Produção' },
+  { href: '/operacional/projetos', label: 'Projetos', icon: '🧩', tabKey: 'Projetos' },
+  { href: '/operacional/precificacao', label: 'Precificação', icon: '💹', tabKey: 'Precificação' },
 
-  { title:'Comercial' },
-  { href:'/comercial/dashboard-comercial', label:'Dashboard Comercial', icon:'📈' },
-  { href:'/comercial/clientes', label:'Clientes', icon:'👥' },
-  { href:'/comercial/pedidos', label:'Pedidos', icon:'🧾' },
-  { href:'/comercial/prospeccoes', label:'Prospecções', icon:'🎯' },
-  { href:'/comercial/cartilha-clientes', label:'Cartilha Clientes', icon:'📘' },
-  { href:'/comercial/rentabilidade-clientes', label:'Rentabilidade Clientes', icon:'💰' },
-  { href:'/comercial/financeiro', label:'Financeiro', icon:'🏦' },
+  { title: 'Comercial' },
+  { href: '/comercial/dashboard-comercial', label: 'Dashboard Comercial', icon: '📈', tabKey: 'Dashboard Comercial' },
+  { href: '/comercial/clientes', label: 'Clientes', icon: '👥', tabKey: 'Clientes' },
+  { href: '/comercial/pedidos', label: 'Pedidos', icon: '🧾', tabKey: 'Pedidos' },
+  { href: '/comercial/prospeccoes', label: 'Prospecções', icon: '🎯', tabKey: 'Prospecções' },
+  { href: '/comercial/cartilha-clientes', label: 'Cartilha Clientes', icon: '📘', tabKey: 'Cartilha Clientes' },
+  { href: '/comercial/rentabilidade-clientes', label: 'Rentabilidade Clientes', icon: '💰', tabKey: 'Rentabilidade Clientes' },
+  { href: '/comercial/financeiro', label: 'Financeiro', icon: '🏦', tabKey: 'Financeiro' },
 ];
 
 const roleLabel = {
@@ -44,25 +45,65 @@ const roleLabel = {
   viewer: 'Leitura',
 };
 
+function groupVisibleLinks(items, role, permissions) {
+  const result = [];
+  let pendingTitle = null;
+
+  for (const item of items) {
+    if (item.title) {
+      pendingTitle = item;
+      continue;
+    }
+
+    const visible = filterMenuItemsByPermissions([item], role, permissions);
+
+    if (visible.length > 0) {
+      if (pendingTitle) {
+        result.push(pendingTitle);
+        pendingTitle = null;
+      }
+      result.push(item);
+    }
+  }
+
+  return result;
+}
+
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+
   const [email, setEmail] = useState('');
   const [companyName, setCompanyName] = useState('Carregando...');
   const [role, setRole] = useState('viewer');
+  const [tabPermissions, setTabPermissions] = useState({});
+  const [loadingMenu, setLoadingMenu] = useState(true);
 
   useEffect(() => {
     async function loadContext() {
-      const { data } = await supabase.auth.getSession();
-      setEmail(data?.session?.user?.email || '');
-
       try {
-        const company = await getCurrentCompany();
-        setCompanyName(company.company_name || 'Empresa');
-        setRole(company.role || 'viewer');
-      } catch {
-        setCompanyName('Sem empresa');
-        setRole('viewer');
+        setLoadingMenu(true);
+
+        const { data } = await supabase.auth.getSession();
+        setEmail(data?.session?.user?.email || '');
+
+        try {
+          const company = await getCurrentCompany();
+          setCompanyName(company.company_name || 'Empresa');
+          setRole(company.role || 'viewer');
+        } catch {
+          setCompanyName('Sem empresa');
+          setRole('viewer');
+        }
+
+        try {
+          const menuData = await getMyMenuPermissions();
+          setTabPermissions(menuData.permissions || {});
+        } catch {
+          setTabPermissions({});
+        }
+      } finally {
+        setLoadingMenu(false);
       }
     }
 
@@ -80,7 +121,10 @@ export default function Sidebar() {
     router.replace('/login');
   }
 
-  const visibleLinks = useMemo(() => filterLinksByRole(links, role), [role]);
+  const visibleLinks = useMemo(() => {
+    const roleFiltered = filterLinksByRole(links, role);
+    return groupVisibleLinks(roleFiltered, role, tabPermissions);
+  }, [role, tabPermissions]);
 
   return (
     <aside className="sidebar">
@@ -93,36 +137,56 @@ export default function Sidebar() {
       </div>
 
       <div className="sidebar-card">
-        <strong>Empresa atual:</strong><br />
+        <strong>Empresa atual:</strong>
+        <br />
         {companyName}
       </div>
 
       <div className="sidebar-card">
-        <strong>Usuário logado:</strong><br />
+        <strong>Usuário logado:</strong>
+        <br />
         {email || 'Não identificado'}
+
         <div style={{ marginTop: 10 }}>
-          <strong>Perfil:</strong><br />
+          <strong>Perfil:</strong>
+          <br />
           {roleLabel[role] || role}
         </div>
+
         <div style={{ marginTop: 12 }}>
-          <button className="btn-secondary" onClick={handleLogout}>Sair</button>
+          <button className="btn-secondary" onClick={handleLogout}>
+            Sair
+          </button>
         </div>
       </div>
 
       <div className="sidebar-title">Navegação</div>
+
       <nav className="nav-list">
-        {visibleLinks.map((item, index) => item.title ? (
-          <div key={`t-${index}`} className="sidebar-title" style={{ marginTop: 12 }}>{item.title}</div>
-        ) : (
-          <Link key={item.href} href={item.href} className={`nav-item ${pathname === item.href ? 'active' : ''}`}>
-            <span className="nav-emoji">{item.icon}</span>
-            <span>{item.label}</span>
-          </Link>
-        ))}
+        {loadingMenu ? null : visibleLinks.map((item, index) =>
+          item.title ? (
+            <div
+              key={`t-${index}`}
+              className="sidebar-title"
+              style={{ marginTop: 12 }}
+            >
+              {item.title}
+            </div>
+          ) : (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`nav-item ${pathname === item.href ? 'active' : ''}`}
+            >
+              <span className="nav-emoji">{item.icon}</span>
+              <span>{item.label}</span>
+            </Link>
+          )
+        )}
       </nav>
 
       <div className="sidebar-card">
-        O menu agora respeita o perfil do usuário. Se quiser, no próximo passo podemos separar também permissões por ação (ex.: pode ver, mas não pode editar).
+        O menu agora respeita o perfil do usuário e também as permissões reais por aba configuradas na tela de usuários.
       </div>
     </aside>
   );
