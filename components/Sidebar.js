@@ -6,8 +6,12 @@ import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { signOutUser } from '@/lib/auth';
 import { getCurrentCompany } from '@/lib/company';
-import { filterLinksByRole } from '@/lib/permissions';
-import { filterMenuItemsByPermissions, getMyMenuPermissions } from '@/lib/menu-permissions';
+import {
+  filterLinksByRole,
+  filterMenuItemsByPermissions,
+  getMyMenuPermissions,
+  groupVisibleLinks
+} from '@/lib/permissions';
 
 const links = [
   { href: '/inicio', label: 'Início', icon: '🏠', tabKey: 'Início' },
@@ -17,23 +21,48 @@ const links = [
   { href: '/usuarios', label: 'Usuários', icon: '👤', tabKey: 'Usuários' },
 
   { title: 'Operacional' },
-  { href: '/operacional/dashboard-operacional', label: 'Dashboard Operacional', icon: '🏭', tabKey: 'Dashboard Operacional' },
+  {
+    href: '/operacional/dashboard-operacional',
+    label: 'Dashboard Operacional',
+    icon: '🏭',
+    tabKey: 'Dashboard Operacional'
+  },
   { href: '/operacional/produtos', label: 'Produtos', icon: '📦', tabKey: 'Produtos' },
   { href: '/operacional/maquinas', label: 'Máquinas', icon: '🖨️', tabKey: 'Máquinas' },
   { href: '/operacional/estoque', label: 'Estoque', icon: '📚', tabKey: 'Estoque' },
   { href: '/operacional/mov-estoque', label: 'Mov. Estoque', icon: '🔄', tabKey: 'Mov. Estoque' },
-  { href: '/operacional/ordens-producao', label: 'Ordens Produção', icon: '🛠️', tabKey: 'Ordens Produção' },
+  {
+    href: '/operacional/ordens-producao',
+    label: 'Ordens Produção',
+    icon: '🛠️',
+    tabKey: 'Ordens Produção'
+  },
   { href: '/operacional/projetos', label: 'Projetos', icon: '🧩', tabKey: 'Projetos' },
   { href: '/operacional/precificacao', label: 'Precificação', icon: '💹', tabKey: 'Precificação' },
 
   { title: 'Comercial' },
-  { href: '/comercial/dashboard-comercial', label: 'Dashboard Comercial', icon: '📈', tabKey: 'Dashboard Comercial' },
+  {
+    href: '/comercial/dashboard-comercial',
+    label: 'Dashboard Comercial',
+    icon: '📈',
+    tabKey: 'Dashboard Comercial'
+  },
   { href: '/comercial/clientes', label: 'Clientes', icon: '👥', tabKey: 'Clientes' },
   { href: '/comercial/pedidos', label: 'Pedidos', icon: '🧾', tabKey: 'Pedidos' },
   { href: '/comercial/prospeccoes', label: 'Prospecções', icon: '🎯', tabKey: 'Prospecções' },
-  { href: '/comercial/cartilha-clientes', label: 'Cartilha Clientes', icon: '📘', tabKey: 'Cartilha Clientes' },
-  { href: '/comercial/rentabilidade-clientes', label: 'Rentabilidade Clientes', icon: '💰', tabKey: 'Rentabilidade Clientes' },
-  { href: '/comercial/financeiro', label: 'Financeiro', icon: '🏦', tabKey: 'Financeiro' },
+  {
+    href: '/comercial/cartilha-clientes',
+    label: 'Cartilha Clientes',
+    icon: '📘',
+    tabKey: 'Cartilha Clientes'
+  },
+  {
+    href: '/comercial/rentabilidade-clientes',
+    label: 'Rentabilidade Clientes',
+    icon: '💰',
+    tabKey: 'Rentabilidade Clientes'
+  },
+  { href: '/comercial/financeiro', label: 'Financeiro', icon: '🏦', tabKey: 'Financeiro' }
 ];
 
 const roleLabel = {
@@ -42,32 +71,8 @@ const roleLabel = {
   comercial: 'Comercial',
   operacional: 'Operacional',
   financeiro: 'Financeiro',
-  viewer: 'Leitura',
+  viewer: 'Leitura'
 };
-
-function groupVisibleLinks(items, role, permissions) {
-  const result = [];
-  let pendingTitle = null;
-
-  for (const item of items) {
-    if (item.title) {
-      pendingTitle = item;
-      continue;
-    }
-
-    const visible = filterMenuItemsByPermissions([item], role, permissions);
-
-    if (visible.length > 0) {
-      if (pendingTitle) {
-        result.push(pendingTitle);
-        pendingTitle = null;
-      }
-      result.push(item);
-    }
-  }
-
-  return result;
-}
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -123,7 +128,12 @@ export default function Sidebar() {
 
   const visibleLinks = useMemo(() => {
     const roleFiltered = filterLinksByRole(links, role);
-    return groupVisibleLinks(roleFiltered, role, tabPermissions);
+    const permissionFiltered =
+      role === 'owner'
+        ? roleFiltered
+        : filterMenuItemsByPermissions(roleFiltered, role, tabPermissions);
+
+    return groupVisibleLinks(permissionFiltered, role, tabPermissions);
   }, [role, tabPermissions]);
 
   return (
@@ -163,26 +173,28 @@ export default function Sidebar() {
       <div className="sidebar-title">Navegação</div>
 
       <nav className="nav-list">
-        {loadingMenu ? null : visibleLinks.map((item, index) =>
-          item.title ? (
-            <div
-              key={`t-${index}`}
-              className="sidebar-title"
-              style={{ marginTop: 12 }}
-            >
-              {item.title}
-            </div>
-          ) : (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`nav-item ${pathname === item.href ? 'active' : ''}`}
-            >
-              <span className="nav-emoji">{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          )
-        )}
+        {loadingMenu
+          ? null
+          : visibleLinks.map((item, index) =>
+              item.title ? (
+                <div
+                  key={`t-${index}`}
+                  className="sidebar-title"
+                  style={{ marginTop: 12 }}
+                >
+                  {item.title}
+                </div>
+              ) : (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`nav-item ${pathname === item.href ? 'active' : ''}`}
+                >
+                  <span className="nav-emoji">{item.icon}</span>
+                  <span>{item.label}</span>
+                </Link>
+              )
+            )}
       </nav>
 
       <div className="sidebar-card">
