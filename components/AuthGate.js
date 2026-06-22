@@ -27,6 +27,9 @@ export default function AuthGate({ children }) {
 
     async function boot() {
       try {
+        if (!active) return;
+
+        setReady(false);
         setError('');
 
         const sess = await getSession();
@@ -86,11 +89,16 @@ export default function AuthGate({ children }) {
         if (!active) return;
 
         if (!hasRouteAccess(company.role, pathname)) {
-          router.replace('/inicio');
+          if (pathname !== '/inicio') {
+            router.replace('/inicio');
+            return;
+          }
+
+          setReady(true);
           return;
         }
 
-        // 6) Nova lógica de permissões reais
+        // 6) Permissões reais por aba
         let menuContext = {
           role: company.role || 'viewer',
           permissions: {}
@@ -108,8 +116,16 @@ export default function AuthGate({ children }) {
         const finalRole = menuContext.role || company.role || 'viewer';
         const finalPermissions = menuContext.permissions || {};
 
-        if (!canAccessPath(finalRole, finalPermissions, pathname)) {
-          router.replace('/inicio');
+        const allowed = canAccessPath(finalRole, finalPermissions, pathname);
+
+        // Evita loop infinito se o fallback já estiver em /inicio
+        if (!allowed) {
+          if (pathname !== '/inicio') {
+            router.replace('/inicio');
+            return;
+          }
+
+          setReady(true);
           return;
         }
 
@@ -136,9 +152,18 @@ export default function AuthGate({ children }) {
 
   if (!ready) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#e9edf3' }}>
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'grid',
+          placeItems: 'center',
+          background: '#e9edf3'
+        }}
+      >
         <div className="surface panel" style={{ width: 460 }}>
-          <h3 className="section-title">Validando acesso, empresa, convite, perfil e permissões...</h3>
+          <h3 className="section-title">
+            Validando acesso, empresa, convite, perfil e permissões...
+          </h3>
           <div className="note">Aguarde um instante.</div>
         </div>
       </div>
@@ -147,7 +172,14 @@ export default function AuthGate({ children }) {
 
   if (error) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#e9edf3' }}>
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'grid',
+          placeItems: 'center',
+          background: '#e9edf3'
+        }}
+      >
         <div className="surface panel" style={{ width: 560 }}>
           <h3 className="section-title">Erro de autenticação/perfil</h3>
           <div className="alert-box">{error}</div>
