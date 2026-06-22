@@ -5,11 +5,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { signOutUser } from '@/lib/auth';
+import { getCurrentCompany } from '@/lib/company';
 import {
   filterMenuItemsByPermissions,
-  getMyMenuPermissions,
   groupVisibleLinks
 } from '@/lib/permissions';
+import { listMyTabPermissions } from '@/lib/service';
 
 const links = [
   { href: '/inicio', label: 'Início', icon: '🏠', tabKey: 'Início' },
@@ -72,6 +73,17 @@ const roleLabel = {
   viewer: 'Leitura'
 };
 
+function normalizePermissions(rows = []) {
+  const map = {};
+
+  rows.forEach((row) => {
+    if (!row?.app_tab) return;
+    map[row.app_tab] = row.permission_level;
+  });
+
+  return map;
+}
+
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -84,29 +96,39 @@ export default function Sidebar() {
 
   useEffect(() => {
     async function loadContext() {
-      try {
-        setLoadingMenu(true);
+      setLoadingMenu(true);
 
+      // 1) sessão / email
+      try {
         const { data } = await supabase.auth.getSession();
         setEmail(data?.session?.user?.email || '');
-
-        const menuData = await getMyMenuPermissions();
-
-        setRole(menuData.role || 'viewer');
-        setTabPermissions(menuData.permissions || {});
-
-        // empresa atual para exibição
-        // como getMyMenuPermissions já depende do contexto da empresa,
-        // deixamos um fallback simples na sidebar
-        setCompanyName('Mundo 3D');
       } catch (error) {
-        console.error('Erro ao carregar Sidebar/permissões:', error);
-        setRole('viewer');
-        setTabPermissions({});
-        setCompanyName('Sem empresa');
-      } finally {
-        setLoadingMenu(false);
+        console.error('Erro ao carregar sessão na Sidebar:', error);
+        setEmail('');
       }
+
+      // 2) empresa + role
+      try {
+        const company = await getCurrentCompany();
+        setCompanyName(company?.company_name || 'Empresa');
+        setRole(company?.role || 'viewer');
+      } catch (error) {
+        console.error('Erro ao carregar empresa/perfil na Sidebar:', error);
+        setCompanyName('Sem empresa');
+        setRole('viewer');
+      }
+
+      // 3) permissões
+      try {
+        const rows = await listMyTabPermissions();
+        const mapped = normalizePermissions(rows || []);
+        setTabPermissions(mapped);
+      } catch (error) {
+        console.error('Erro ao carregar permissões na Sidebar:', error);
+        setTabPermissions({});
+      }
+
+      setLoadingMenu(false);
     }
 
     loadContext();
