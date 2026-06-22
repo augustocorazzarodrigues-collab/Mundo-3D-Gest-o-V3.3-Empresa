@@ -81,7 +81,7 @@ export default function AuthGate({ children }) {
           return;
         }
 
-        // 5) Mantém a lógica existente de perfil por rota
+        // 5) Buscar contexto da empresa / perfil
         const company = await getCurrentCompany();
         if (!active) return;
 
@@ -90,7 +90,7 @@ export default function AuthGate({ children }) {
           return;
         }
 
-        // 6) Nova lógica de permissões reais por aba
+        // 6) Nova lógica de permissões reais
         let menuContext = {
           role: company.role || 'viewer',
           permissions: {}
