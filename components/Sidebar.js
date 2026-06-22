@@ -5,12 +5,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { signOutUser } from '@/lib/auth';
-import { getCurrentCompany } from '@/lib/company';
 import {
   filterMenuItemsByPermissions,
   groupVisibleLinks
 } from '@/lib/permissions';
-import { listMyTabPermissions } from '@/lib/service';
+import { getMySidebarContext } from '@/lib/service';
 
 const links = [
   { href: '/inicio', label: 'Início', icon: '🏠', tabKey: 'Início' },
@@ -98,7 +97,6 @@ export default function Sidebar() {
     async function loadContext() {
       setLoadingMenu(true);
 
-      // 1) sessão / email
       try {
         const { data } = await supabase.auth.getSession();
         setEmail(data?.session?.user?.email || '');
@@ -107,28 +105,26 @@ export default function Sidebar() {
         setEmail('');
       }
 
-      // 2) empresa + role
       try {
-        const company = await getCurrentCompany();
-        setCompanyName(company?.company_name || 'Empresa');
-        setRole(company?.role || 'viewer');
+        const rows = await getMySidebarContext();
+
+        if (rows.length > 0) {
+          setCompanyName(rows[0]?.company_name || 'Empresa');
+          setRole(rows[0]?.role || 'viewer');
+          setTabPermissions(normalizePermissions(rows));
+        } else {
+          setCompanyName('Sem empresa');
+          setRole('viewer');
+          setTabPermissions({});
+        }
       } catch (error) {
-        console.error('Erro ao carregar empresa/perfil na Sidebar:', error);
+        console.error('Erro ao carregar contexto do menu lateral:', error);
         setCompanyName('Sem empresa');
         setRole('viewer');
-      }
-
-      // 3) permissões
-      try {
-        const rows = await listMyTabPermissions();
-        const mapped = normalizePermissions(rows || []);
-        setTabPermissions(mapped);
-      } catch (error) {
-        console.error('Erro ao carregar permissões na Sidebar:', error);
         setTabPermissions({});
+      } finally {
+        setLoadingMenu(false);
       }
-
-      setLoadingMenu(false);
     }
 
     loadContext();
