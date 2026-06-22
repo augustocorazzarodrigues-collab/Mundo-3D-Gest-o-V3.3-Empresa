@@ -44,11 +44,22 @@ const ROLE_COLORS = {
 const APP_TABS = [
   'Início',
   'Dashboard Geral',
-  'Comercial',
-  'Operacional',
-  'Financeiro',
   'Usuários',
-  'Configurações'
+  'Dashboard Operacional',
+  'Produtos',
+  'Máquinas',
+  'Estoque',
+  'Mov. Estoque',
+  'Ordens Produção',
+  'Projetos',
+  'Precificação',
+  'Dashboard Comercial',
+  'Clientes',
+  'Pedidos',
+  'Prospecções',
+  'Cartilha Clientes',
+  'Rentabilidade Clientes',
+  'Financeiro'
 ];
 
 export default function UsuariosPage() {
@@ -101,7 +112,8 @@ export default function UsuariosPage() {
           mappedPermissions[item.company_user_id] = {};
         }
 
-        mappedPermissions[item.company_user_id][item.app_tab] = item.permission_level;
+        mappedPermissions[item.company_user_id][item.app_tab] =
+          item.permission_level;
       });
 
       setAccessControl(mappedPermissions);
@@ -208,7 +220,8 @@ export default function UsuariosPage() {
           <span style={styles.kicker}>Gestão de acessos</span>
           <h1 style={styles.title}>Usuários da empresa</h1>
           <p style={styles.subtitle}>
-            Convide novos usuários, acompanhe convites pendentes e gerencie os acessos da sua empresa com mais controle.
+            Convide novos usuários, acompanhe convites pendentes e gerencie os
+            acessos da sua empresa com mais controle.
           </p>
         </div>
 
@@ -300,7 +313,8 @@ export default function UsuariosPage() {
               <div>
                 <h2 style={styles.cardTitle}>Convites pendentes</h2>
                 <p style={styles.cardDescription}>
-                  Aqui aparecem apenas os convites enviados que ainda aguardam resposta.
+                  Aqui aparecem apenas os convites enviados que ainda aguardam
+                  resposta.
                 </p>
               </div>
 
@@ -312,7 +326,8 @@ export default function UsuariosPage() {
                 <div style={styles.emptyIcon}>✉</div>
                 <h3 style={styles.emptyTitle}>Nenhum convite pendente</h3>
                 <p style={styles.emptyText}>
-                  Quando você criar novos convites, eles aparecerão aqui com a opção de cancelar.
+                  Quando você criar novos convites, eles aparecerão aqui com a
+                  opção de cancelar.
                 </p>
               </div>
             ) : (
@@ -324,12 +339,16 @@ export default function UsuariosPage() {
                     <div key={inv.id} style={styles.inviteCard}>
                       <div style={styles.inviteMain}>
                         <div style={styles.avatarCircle}>
-                          {(inv.name || inv.email || '?').charAt(0).toUpperCase()}
+                          {(inv.name || inv.email || '?')
+                            .charAt(0)
+                            .toUpperCase()}
                         </div>
 
                         <div style={styles.inviteInfo}>
                           <div style={styles.inviteTopLine}>
-                            <strong style={styles.inviteEmail}>{inv.email}</strong>
+                            <strong style={styles.inviteEmail}>
+                              {inv.email}
+                            </strong>
                             <span
                               style={{
                                 ...styles.roleBadge,
@@ -345,11 +364,14 @@ export default function UsuariosPage() {
                           {inv.name ? (
                             <div style={styles.inviteName}>{inv.name}</div>
                           ) : (
-                            <div style={styles.inviteNameMuted}>Nome não informado</div>
+                            <div style={styles.inviteNameMuted}>
+                              Nome não informado
+                            </div>
                           )}
 
                           <div style={styles.statusLine}>
-                            Status: <span style={styles.pendingStatus}>Pendente</span>
+                            Status:{' '}
+                            <span style={styles.pendingStatus}>Pendente</span>
                           </div>
                         </div>
                       </div>
@@ -360,7 +382,9 @@ export default function UsuariosPage() {
                         style={styles.cancelButton}
                         disabled={cancelingId === inv.id}
                       >
-                        {cancelingId === inv.id ? 'Cancelando...' : 'Cancelar convite'}
+                        {cancelingId === inv.id
+                          ? 'Cancelando...'
+                          : 'Cancelar convite'}
                       </button>
                     </div>
                   );
@@ -374,9 +398,12 @@ export default function UsuariosPage() {
           <div style={styles.card}>
             <div style={styles.cardHeader}>
               <div>
-                <h2 style={styles.cardTitle}>Painel de controle de usuários</h2>
+                <h2 style={styles.cardTitle}>
+                  Painel de controle de usuários
+                </h2>
                 <p style={styles.cardDescription}>
-                  Exibe apenas usuários ativos da empresa. Agora as permissões são salvas no banco em tempo real.
+                  Exibe apenas usuários ativos da empresa. Agora as permissões
+                  são salvas no banco em tempo real.
                 </p>
               </div>
 
@@ -386,7 +413,9 @@ export default function UsuariosPage() {
             {activeUsers.length === 0 ? (
               <div style={styles.emptyStateBlue}>
                 <div style={styles.emptyIconBlue}>👤</div>
-                <h3 style={styles.emptyTitle}>Nenhum usuário ativo adicional</h3>
+                <h3 style={styles.emptyTitle}>
+                  Nenhum usuário ativo adicional
+                </h3>
                 <p style={styles.emptyText}>
                   No momento, não há usuários ativos além do owner da empresa.
                 </p>
@@ -395,18 +424,23 @@ export default function UsuariosPage() {
               <div style={styles.userControlList}>
                 {activeUsers.map((user) => {
                   const roleStyle = getRoleStyle(user.role);
-                  const userKey = user.company_user_id || user.user_id || user.id;
+                  const userKey =
+                    user.company_user_id || user.user_id || user.id;
 
                   return (
                     <div key={userKey} style={styles.userControlCard}>
                       <div style={styles.userHeader}>
                         <div style={styles.avatarCircleBlue}>
-                          {(user.name || user.email || '?').charAt(0).toUpperCase()}
+                          {(user.name || user.email || '?')
+                            .charAt(0)
+                            .toUpperCase()}
                         </div>
 
                         <div style={styles.userHeaderInfo}>
                           <div style={styles.inviteTopLine}>
-                            <strong style={styles.inviteEmail}>{user.email}</strong>
+                            <strong style={styles.inviteEmail}>
+                              {user.email}
+                            </strong>
                             <span
                               style={{
                                 ...styles.roleBadge,
@@ -426,7 +460,9 @@ export default function UsuariosPage() {
                       </div>
 
                       <div style={styles.permissionsBox}>
-                        <div style={styles.permissionsTitle}>Permissões por aba</div>
+                        <div style={styles.permissionsTitle}>
+                          Permissões por aba
+                        </div>
 
                         {APP_TABS.map((tab) => {
                           const currentPermission =
@@ -442,7 +478,9 @@ export default function UsuariosPage() {
                               <div style={styles.permissionOptions}>
                                 <button
                                   type="button"
-                                  onClick={() => updateAccess(userKey, tab, 'none')}
+                                  onClick={() =>
+                                    updateAccess(userKey, tab, 'none')
+                                  }
                                   style={{
                                     ...styles.permissionButton,
                                     ...(currentPermission === 'none'
@@ -456,7 +494,9 @@ export default function UsuariosPage() {
 
                                 <button
                                   type="button"
-                                  onClick={() => updateAccess(userKey, tab, 'view')}
+                                  onClick={() =>
+                                    updateAccess(userKey, tab, 'view')
+                                  }
                                   style={{
                                     ...styles.permissionButton,
                                     ...(currentPermission === 'view'
@@ -470,7 +510,9 @@ export default function UsuariosPage() {
 
                                 <button
                                   type="button"
-                                  onClick={() => updateAccess(userKey, tab, 'edit')}
+                                  onClick={() =>
+                                    updateAccess(userKey, tab, 'edit')
+                                  }
                                   style={{
                                     ...styles.permissionButton,
                                     ...(currentPermission === 'edit'
@@ -924,7 +966,7 @@ const styles = {
   },
   permissionRow: {
     display: 'grid',
-    gridTemplateColumns: '160px 1fr 90px',
+    gridTemplateColumns: '180px 1fr 90px',
     alignItems: 'center',
     gap: 12,
     padding: '12px 0',
