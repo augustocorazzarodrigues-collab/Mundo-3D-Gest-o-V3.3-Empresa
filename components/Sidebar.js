@@ -5,9 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { signOutUser } from '@/lib/auth';
-import { getCurrentCompany } from '@/lib/company';
 import {
-  filterLinksByRole,
   filterMenuItemsByPermissions,
   getMyMenuPermissions,
   groupVisibleLinks
@@ -62,7 +60,7 @@ const links = [
     icon: '💰',
     tabKey: 'Rentabilidade Clientes'
   },
-  { href: '/comercial/financeiro', label: 'Financeiro', icon: '🏦', tabKey: 'Financeiro' }
+  { href: '/comercial/financeiro', label: 'Financeiro', icon: '🏦', tabKey: 'Financeiro' },
 ];
 
 const roleLabel = {
@@ -92,21 +90,20 @@ export default function Sidebar() {
         const { data } = await supabase.auth.getSession();
         setEmail(data?.session?.user?.email || '');
 
-        try {
-          const company = await getCurrentCompany();
-          setCompanyName(company.company_name || 'Empresa');
-          setRole(company.role || 'viewer');
-        } catch {
-          setCompanyName('Sem empresa');
-          setRole('viewer');
-        }
+        const menuData = await getMyMenuPermissions();
 
-        try {
-          const menuData = await getMyMenuPermissions();
-          setTabPermissions(menuData.permissions || {});
-        } catch {
-          setTabPermissions({});
-        }
+        setRole(menuData.role || 'viewer');
+        setTabPermissions(menuData.permissions || {});
+
+        // empresa atual para exibição
+        // como getMyMenuPermissions já depende do contexto da empresa,
+        // deixamos um fallback simples na sidebar
+        setCompanyName('Mundo 3D');
+      } catch (error) {
+        console.error('Erro ao carregar Sidebar/permissões:', error);
+        setRole('viewer');
+        setTabPermissions({});
+        setCompanyName('Sem empresa');
       } finally {
         setLoadingMenu(false);
       }
@@ -127,11 +124,10 @@ export default function Sidebar() {
   }
 
   const visibleLinks = useMemo(() => {
-    const roleFiltered = filterLinksByRole(links, role);
     const permissionFiltered =
       role === 'owner'
-        ? roleFiltered
-        : filterMenuItemsByPermissions(roleFiltered, role, tabPermissions);
+        ? links
+        : filterMenuItemsByPermissions(links, role, tabPermissions);
 
     return groupVisibleLinks(permissionFiltered, role, tabPermissions);
   }, [role, tabPermissions]);
@@ -203,4 +199,3 @@ export default function Sidebar() {
     </aside>
   );
 }
-``
