@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   createCompanyInvite,
   listMyCompanyInvites,
   cancelCompanyInvite,
   listMyCompanyActiveUsers,
   listMyCompanyPermissions,
-  saveMyCompanyUserPermission
+  saveMyCompanyUserPermission,
+  dismissCompanyUser
 } from '@/lib/service';
 import { getCurrentCompany } from '@/lib/company';
 import { useRouter } from 'next/navigation';
@@ -69,10 +70,12 @@ export default function UsuariosPage() {
   const [submitting, setSubmitting] = useState(false);
   const [cancelingId, setCancelingId] = useState(null);
   const [savingKey, setSavingKey] = useState('');
+  const [dismissingId, setDismissingId] = useState('');
 
   const [invites, setInvites] = useState([]);
   const [activeUsers, setActiveUsers] = useState([]);
   const [accessControl, setAccessControl] = useState({});
+  const [expandedUsers, setExpandedUsers] = useState({});
 
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -117,6 +120,15 @@ export default function UsuariosPage() {
       });
 
       setAccessControl(mappedPermissions);
+
+      setExpandedUsers((prev) => {
+        const nextExpanded = {};
+        (users || []).forEach((user) => {
+          const userKey = user.company_user_id || user.user_id || user.id;
+          nextExpanded[userKey] = prev[userKey] ?? false;
+        });
+        return nextExpanded;
+      });
     } catch (err) {
       setError(err.message || 'Erro ao carregar dados.');
     } finally {
@@ -168,6 +180,32 @@ export default function UsuariosPage() {
     }
   }
 
+  async function handleDismissUser(user) {
+    const userKey = user.company_user_id || user.user_id || user.id;
+    const displayName = user.name || user.email || 'este colaborador';
+
+    const confirmed = window.confirm(
+      `Tem certeza que deseja demitir ${displayName}?\n\nEssa ação vai remover o colaborador da sua empresa e excluir a conta do sistema.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setError('');
+      setSuccess('');
+      setDismissingId(userKey);
+
+      await dismissCompanyUser(userKey);
+
+      setSuccess(`Colaborador ${displayName} removido com sucesso.`);
+      await loadData();
+    } catch (err) {
+      setError(err.message || 'Erro ao demitir colaborador.');
+    } finally {
+      setDismissingId('');
+    }
+  }
+
   function getRoleStyle(roleValue) {
     return ROLE_COLORS[roleValue] || {
       background: '#F3F4F6',
@@ -201,6 +239,35 @@ export default function UsuariosPage() {
       setSavingKey('');
     }
   }
+
+  function toggleUserPermissions(userKey) {
+    setExpandedUsers((prev) => ({
+      ...prev,
+      [userKey]: !prev[userKey]
+    }));
+  }
+
+  function expandAllPermissions() {
+    const next = {};
+    activeUsers.forEach((user) => {
+      const userKey = user.company_user_id || user.user_id || user.id;
+      next[userKey] = true;
+    });
+    setExpandedUsers(next);
+  }
+
+  function collapseAllPermissions() {
+    const next = {};
+    activeUsers.forEach((user) => {
+      const userKey = user.company_user_id || user.user_id || user.id;
+      next[userKey] = false;
+    });
+    setExpandedUsers(next);
+  }
+
+  const expandedCount = useMemo(() => {
+    return Object.values(expandedUsers).filter(Boolean).length;
+  }, [expandedUsers]);
 
   if (loading) {
     return (
@@ -398,24 +465,47 @@ export default function UsuariosPage() {
           <div style={styles.card}>
             <div style={styles.cardHeader}>
               <div>
-                <h2 style={styles.cardTitle}>
-                  Painel de controle de usuários
-                </h2>
+                <h2 style={styles.cardTitle}>Painel de controle de usuários</h2>
                 <p style={styles.cardDescription}>
-                  Exibe apenas usuários ativos da empresa. Agora as permissões
-                  são salvas no banco em tempo real.
+                  Exibe usuários ativos da empresa e permite gerir permissões de
+                  forma rápida.
                 </p>
               </div>
 
               <div style={styles.counterBadgeBlue}>{activeUsers.length}</div>
             </div>
 
+            <div style={styles.toolbarRow}>
+              <div style={styles.toolbarInfo}>
+                {expandedCount === activeUsers.length && activeUsers.length > 0
+                  ? 'Todas as permissões estão expandidas.'
+                  : expandedCount > 0
+                    ? `${expandedCount} colaborador(es) com permissões expandidas.`
+                    : 'Todas as permissões estão minimizadas.'}
+              </div>
+
+              <div style={styles.toolbarButtons}>
+                <button
+                  type="button"
+                  onClick={collapseAllPermissions}
+                  style={styles.secondaryToolbarButton}
+                >
+                  Minimizar tudo
+                </button>
+                <button
+                  type="button"
+                  onClick={expandAllPermissions}
+                  style={styles.primaryToolbarButton}
+                >
+                  Maximizar tudo
+                </button>
+              </div>
+            </div>
+
             {activeUsers.length === 0 ? (
               <div style={styles.emptyStateBlue}>
                 <div style={styles.emptyIconBlue}>👤</div>
-                <h3 style={styles.emptyTitle}>
-                  Nenhum usuário ativo adicional
-                </h3>
+                <h3 style={styles.emptyTitle}>Nenhum usuário ativo adicional</h3>
                 <p style={styles.emptyText}>
                   No momento, não há usuários ativos além do owner da empresa.
                 </p>
@@ -426,112 +516,146 @@ export default function UsuariosPage() {
                   const roleStyle = getRoleStyle(user.role);
                   const userKey =
                     user.company_user_id || user.user_id || user.id;
+                  const isExpanded = expandedUsers[userKey] ?? false;
+                  const isDismissing = dismissingId === userKey;
 
                   return (
                     <div key={userKey} style={styles.userControlCard}>
-                      <div style={styles.userHeader}>
-                        <div style={styles.avatarCircleBlue}>
-                          {(user.name || user.email || '?')
-                            .charAt(0)
-                            .toUpperCase()}
-                        </div>
-
-                        <div style={styles.userHeaderInfo}>
-                          <div style={styles.inviteTopLine}>
-                            <strong style={styles.inviteEmail}>
-                              {user.email}
-                            </strong>
-                            <span
-                              style={{
-                                ...styles.roleBadge,
-                                background: roleStyle.background,
-                                color: roleStyle.color,
-                                borderColor: roleStyle.border
-                              }}
-                            >
-                              {user.role}
-                            </span>
+                      <div style={styles.userHeaderTop}>
+                        <div style={styles.userHeaderLeft}>
+                          <div style={styles.avatarCircleBlue}>
+                            {(user.name || user.email || '?')
+                              .charAt(0)
+                              .toUpperCase()}
                           </div>
 
-                          <div style={styles.inviteName}>
-                            {user.name || 'Nome não informado'}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div style={styles.permissionsBox}>
-                        <div style={styles.permissionsTitle}>
-                          Permissões por aba
-                        </div>
-
-                        {APP_TABS.map((tab) => {
-                          const currentPermission =
-                            accessControl[userKey]?.[tab] || 'view';
-
-                          const rowSavingKey = `${userKey}::${tab}`;
-                          const isSaving = savingKey === rowSavingKey;
-
-                          return (
-                            <div key={tab} style={styles.permissionRow}>
-                              <div style={styles.permissionTabName}>{tab}</div>
-
-                              <div style={styles.permissionOptions}>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    updateAccess(userKey, tab, 'none')
-                                  }
-                                  style={{
-                                    ...styles.permissionButton,
-                                    ...(currentPermission === 'none'
-                                      ? styles.permissionButtonActiveLight
-                                      : {})
-                                  }}
-                                  disabled={isSaving}
-                                >
-                                  Não visualiza
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    updateAccess(userKey, tab, 'view')
-                                  }
-                                  style={{
-                                    ...styles.permissionButton,
-                                    ...(currentPermission === 'view'
-                                      ? styles.permissionButtonActiveBlue
-                                      : {})
-                                  }}
-                                  disabled={isSaving}
-                                >
-                                  Visualiza
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    updateAccess(userKey, tab, 'edit')
-                                  }
-                                  style={{
-                                    ...styles.permissionButton,
-                                    ...(currentPermission === 'edit'
-                                      ? styles.permissionButtonActiveDark
-                                      : {})
-                                  }}
-                                  disabled={isSaving}
-                                >
-                                  Visualiza e altera
-                                </button>
-                              </div>
-
-                              <div style={styles.permissionStatus}>
-                                {isSaving ? 'Salvando...' : 'Salvo'}
-                              </div>
+                          <div style={styles.userHeaderInfo}>
+                            <div style={styles.inviteTopLine}>
+                              <strong style={styles.inviteEmail}>
+                                {user.email}
+                              </strong>
+                              <span
+                                style={{
+                                  ...styles.roleBadge,
+                                  background: roleStyle.background,
+                                  color: roleStyle.color,
+                                  borderColor: roleStyle.border
+                                }}
+                              >
+                                {user.role}
+                              </span>
                             </div>
-                          );
-                        })}
+
+                            <div style={styles.inviteName}>
+                              {user.name || 'Nome não informado'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={styles.userActionButtons}>
+                          <button
+                            type="button"
+                            onClick={() => toggleUserPermissions(userKey)}
+                            style={styles.secondaryToolbarButton}
+                          >
+                            {isExpanded
+                              ? 'Minimizar permissões'
+                              : 'Maximizar permissões'}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDismissUser(user)}
+                            style={styles.dismissButton}
+                            disabled={isDismissing}
+                          >
+                            {isDismissing
+                              ? 'Demitindo...'
+                              : 'Demitir colaborador'}
+                          </button>
+                        </div>
                       </div>
+
+                      {isExpanded ? (
+                        <div style={styles.permissionsBox}>
+                          <div style={styles.permissionsTitle}>
+                            Permissões por aba
+                          </div>
+
+                          {APP_TABS.map((tab) => {
+                            const currentPermission =
+                              accessControl[userKey]?.[tab] || 'view';
+
+                            const rowSavingKey = `${userKey}::${tab}`;
+                            const isSaving = savingKey === rowSavingKey;
+
+                            return (
+                              <div key={tab} style={styles.permissionRow}>
+                                <div style={styles.permissionTabName}>{tab}</div>
+
+                                <div style={styles.permissionOptions}>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      updateAccess(userKey, tab, 'none')
+                                    }
+                                    style={{
+                                      ...styles.permissionButton,
+                                      ...(currentPermission === 'none'
+                                        ? styles.permissionButtonActiveLight
+                                        : {})
+                                    }}
+                                    disabled={isSaving}
+                                  >
+                                    Não visualiza
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      updateAccess(userKey, tab, 'view')
+                                    }
+                                    style={{
+                                      ...styles.permissionButton,
+                                      ...(currentPermission === 'view'
+                                        ? styles.permissionButtonActiveBlue
+                                        : {})
+                                    }}
+                                    disabled={isSaving}
+                                  >
+                                    Visualiza
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      updateAccess(userKey, tab, 'edit')
+                                    }
+                                    style={{
+                                      ...styles.permissionButton,
+                                      ...(currentPermission === 'edit'
+                                        ? styles.permissionButtonActiveDark
+                                        : {})
+                                    }}
+                                    disabled={isSaving}
+                                  >
+                                    Visualiza e altera
+                                  </button>
+                                </div>
+
+                                <div style={styles.permissionStatus}>
+                                  {isSaving ? 'Salvando...' : 'Salvo'}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div style={styles.collapsedHint}>
+                          Permissões minimizadas. Clique em “Maximizar
+                          permissões” para editar este colaborador.
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -879,6 +1003,58 @@ const styles = {
     cursor: 'pointer',
     whiteSpace: 'nowrap'
   },
+  toolbarRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 18,
+    padding: '12px 14px',
+    borderRadius: 16,
+    border: '1px solid #D7E6FF',
+    background: '#F8FBFF',
+    flexWrap: 'wrap'
+  },
+  toolbarInfo: {
+    fontSize: 13,
+    fontWeight: 700,
+    color: '#475569'
+  },
+  toolbarButtons: {
+    display: 'flex',
+    gap: 8,
+    flexWrap: 'wrap'
+  },
+  primaryToolbarButton: {
+    height: 40,
+    padding: '0 14px',
+    borderRadius: 12,
+    border: '1px solid #2563EB',
+    background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+    color: '#FFFFFF',
+    fontWeight: 800,
+    cursor: 'pointer'
+  },
+  secondaryToolbarButton: {
+    height: 40,
+    padding: '0 14px',
+    borderRadius: 12,
+    border: '1px solid #CBD5E1',
+    background: '#FFFFFF',
+    color: '#334155',
+    fontWeight: 700,
+    cursor: 'pointer'
+  },
+  dismissButton: {
+    height: 40,
+    padding: '0 14px',
+    borderRadius: 12,
+    border: '1px solid #FDA29B',
+    background: '#FEF3F2',
+    color: '#B42318',
+    fontWeight: 800,
+    cursor: 'pointer'
+  },
   emptyState: {
     border: '1px dashed #BFDBFE',
     borderRadius: 18,
@@ -944,19 +1120,40 @@ const styles = {
     border: '1px solid #D7E6FF',
     background: '#F8FBFF'
   },
-  userHeader: {
+  userHeaderTop: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 16,
+    flexWrap: 'wrap'
+  },
+  userHeaderLeft: {
     display: 'flex',
     alignItems: 'center',
     gap: 14,
-    marginBottom: 18
+    minWidth: 0
   },
   userHeaderInfo: {
     minWidth: 0
   },
+  userActionButtons: {
+    display: 'flex',
+    gap: 8,
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end'
+  },
   permissionsBox: {
-    marginTop: 6,
+    marginTop: 16,
     borderTop: '1px solid #D7E6FF',
     paddingTop: 16
+  },
+  collapsedHint: {
+    marginTop: 16,
+    borderTop: '1px solid #D7E6FF',
+    paddingTop: 16,
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: 600
   },
   permissionsTitle: {
     fontSize: 14,
